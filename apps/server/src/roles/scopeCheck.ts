@@ -6,6 +6,7 @@
  * the commit it started from (`workspaceStrategy.baseRef` for worktree children).
  * Append `warning` to the result delivered to the parent. Nothing is reverted.
  */
+// @effect-diagnostics-next-line nodeBuiltinImport:off -- git runs as a plain promise; callers wrap it in Effect.promise.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -33,10 +34,18 @@ export function scopeWarning(role: Role, outOfScope: ReadonlyArray<string>): str
     .join("\n")}`;
 }
 
-export function scopeCheckFromPaths(role: Role, changedPaths: ReadonlyArray<string>): RoleScopeCheck {
+export function scopeCheckFromPaths(
+  role: Role,
+  changedPaths: ReadonlyArray<string>,
+): RoleScopeCheck {
   const unique = [...new Set(changedPaths.map((p) => p.trim()).filter((p) => p.length > 0))].sort();
   const outOfScope = pathsOutOfScope(role, unique);
-  return { roleId: role.id, changedPaths: unique, outOfScope, warning: scopeWarning(role, outOfScope) };
+  return {
+    roleId: role.id,
+    changedPaths: unique,
+    outOfScope,
+    warning: scopeWarning(role, outOfScope),
+  };
 }
 
 /** Changed (committed, uncommitted and untracked) paths since `baseRef`, checked against the role. */

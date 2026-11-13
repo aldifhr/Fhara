@@ -11,10 +11,15 @@ import type { RunGit } from "./scopeCheck.ts";
 
 const worktreeRuns = [
   { workspacePreparation: undefined },
-  { workspacePreparation: { type: "worktree" as const, baseRef: "abc123", startFromOrigin: false } },
+  {
+    workspacePreparation: { type: "worktree" as const, baseRef: "abc123", startFromOrigin: false },
+  },
 ];
 
-function fakeGit(diff: string, untracked = ""): { runGit: RunGit; calls: Array<ReadonlyArray<string>> } {
+function fakeGit(
+  diff: string,
+  untracked = "",
+): { runGit: RunGit; calls: Array<ReadonlyArray<string>> } {
   const calls: Array<ReadonlyArray<string>> = [];
   return {
     calls,
@@ -27,13 +32,15 @@ function fakeGit(diff: string, untracked = ""): { runGit: RunGit; calls: Array<R
 
 describe("delegated child scope warning", () => {
   it("recovers the role from the delegated task prompt", () => {
-    expect(roleForDelegatedPrompt(taskPrompt({ task: "Fix the button", role: "frontend" } as never))?.id).toBe(
-      "frontend",
-    );
-    expect(roleForDelegatedPrompt(taskPrompt({ task: "Review it", role: "reviewer" } as never))?.id).toBe(
-      "reviewer",
-    );
-    expect(roleForDelegatedPrompt(taskPrompt({ task: "x", role: "implementation" } as never))).toBeUndefined();
+    expect(
+      roleForDelegatedPrompt(taskPrompt({ task: "Fix the button", role: "frontend" } as never))?.id,
+    ).toBe("frontend");
+    expect(
+      roleForDelegatedPrompt(taskPrompt({ task: "Review it", role: "reviewer" } as never))?.id,
+    ).toBe("reviewer");
+    expect(
+      roleForDelegatedPrompt(taskPrompt({ task: "x", role: "implementation" } as never)),
+    ).toBeUndefined();
     expect(roleForDelegatedPrompt("plain task")).toBeUndefined();
   });
 
@@ -71,7 +78,12 @@ describe("delegated child scope warning", () => {
     const inScope = fakeGit("apps/web/src/App.tsx\n");
     const prompt = taskPrompt({ task: "Fix", role: "frontend" } as never);
     expect(
-      await delegatedScopeWarning({ prompt, worktreePath: "/tmp/c", runs: worktreeRuns, runGit: inScope.runGit }),
+      await delegatedScopeWarning({
+        prompt,
+        worktreePath: "/tmp/c",
+        runs: worktreeRuns,
+        runGit: inScope.runGit,
+      }),
     ).toBeNull();
     const untouched = fakeGit("apps/server/x.ts\n");
     expect(
@@ -83,7 +95,12 @@ describe("delegated child scope warning", () => {
       }),
     ).toBeNull();
     expect(
-      await delegatedScopeWarning({ prompt: "plain", worktreePath: "/tmp/c", runs: worktreeRuns, runGit: untouched.runGit }),
+      await delegatedScopeWarning({
+        prompt: "plain",
+        worktreePath: "/tmp/c",
+        runs: worktreeRuns,
+        runGit: untouched.runGit,
+      }),
     ).toBeNull();
     expect(untouched.calls).toEqual([]);
     expect(
