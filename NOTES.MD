@@ -1,4 +1,3 @@
-<div class="absolute z-20 -top-1.5 -right-1.5"><button aria-label="Dismiss notification" class="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border/60 bg-popover/92 text-muted-foreground shadow-sm outline-none backdrop-blur-sm transition-[color,background-color,box-shadow] hover:bg-popover hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background" data-slot="toast-close" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x size-3" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> HAPUS
-
-HAPUS FITUR SIDE CHAT
-TAMBAH FITUR QUEUE
+- [x] Hapus tombol X (close) di toast — selesai
+- [x] Hapus fitur side chat — selesai
+- [x] Tambah fitur queue (default saat kirim pesan ketika turn berjalan) — selesai
