@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { AgentRolesSection } from "./AgentRolesSettings";
 import { NotificationSettings } from "./NotificationSettings";
 import { PRIVACY_POLICY_URL } from "../../legalLinks";
 import { CheckIcon } from "lucide-react";
@@ -2125,6 +2126,7 @@ export function ThreadsSettingsPanel() {
           />
         </AdvancedSettings>
       </SettingsSection>
+      <AgentRolesSection />
     </SettingsPageContainer>
   );
 }
