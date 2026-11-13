@@ -211,6 +211,63 @@ describe("thread workflows", () => {
     }
   });
 
+  it("lists follow-ups queued behind a running turn, drops the one that starts, and pauses on a hold", () => {
+    const base = {
+      thread: { id: "thread", activeProviderThreadId: null },
+      messages: [
+        { id: "m-first", text: "First follow-up" },
+        { id: "m-second", text: "Second follow-up" },
+      ],
+      providerThreads: [],
+      providerTurns: [],
+      providerSessions: [],
+    };
+    const view = (runs: ReadonlyArray<Record<string, unknown>>) =>
+      deriveThreadQueueWorkflowState({ ...base, runs } as never);
+
+    // Enqueue: both follow-ups wait behind the running turn, in send order.
+    const queued = view([
+      { id: "active", status: "running", ordinal: 1, activeAttemptId: null },
+      { id: "second", status: "queued", userMessageId: "m-second", ordinal: 3 },
+      { id: "first", status: "queued", userMessageId: "m-first", ordinal: 2 },
+    ]);
+    expect(queued.queuedRuns.map(({ text }) => text)).toEqual([
+      "First follow-up",
+      "Second follow-up",
+    ]);
+    expect(queued.isHeld).toBe(false);
+    expect(queued.canSendNow).toBe(false);
+
+    // Dequeue on finish: the turn completed and the next follow-up started on its own.
+    const advanced = view([
+      { id: "active", status: "completed", ordinal: 1 },
+      {
+        id: "first",
+        status: "running",
+        userMessageId: "m-first",
+        ordinal: 2,
+        activeAttemptId: null,
+      },
+      { id: "second", status: "queued", userMessageId: "m-second", ordinal: 3 },
+    ]);
+    expect(advanced.activeRun?.id).toBe("first");
+    expect(advanced.queuedRuns.map(({ text }) => text)).toEqual(["Second follow-up"]);
+
+    // Pause on error or Stop: the remaining follow-ups stay listed and held until the user sends.
+    const paused = view([
+      { id: "active", status: "failed", ordinal: 1 },
+      { id: "first", status: "queued", userMessageId: "m-first", ordinal: 2, queueHeld: true },
+      { id: "second", status: "queued", userMessageId: "m-second", ordinal: 3, queueHeld: true },
+    ]);
+    expect(paused.isHeld).toBe(true);
+    expect(paused.activeRun).toBeNull();
+    expect(paused.canSendNow).toBe(true);
+    expect(paused.queuedRuns.map(({ text }) => text)).toEqual([
+      "First follow-up",
+      "Second follow-up",
+    ]);
+  });
+
   it("hides automatic completion delivery from the visible queue", () => {
     const state = deriveThreadQueueWorkflowState({
       thread: { id: "thread", activeProviderThreadId: null },
