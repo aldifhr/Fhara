@@ -338,10 +338,8 @@ export function usePullRequestHandoffs({
     const toastId = toastManager.add({
       type: "loading",
       title: `Preparing the ${terminology.singular} checkout...`,
-      data: {
-        onClose: () => {
-          cancelled = true;
-        },
+      onClose: () => {
+        cancelled = true;
       },
     });
     const projectRef = scopeProjectRef(environmentId, detail.projectId);

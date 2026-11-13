@@ -15,7 +15,6 @@ import {
   CircleCheckIcon,
   InfoIcon,
   TriangleAlertIcon,
-  XIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -40,7 +39,6 @@ export type ThreadToastData = {
   threadId?: ThreadId | null;
   leadingIcon?: ReactNode;
   tooltipStyle?: boolean;
-  onClose?: (() => void) | undefined;
   dismissAfterVisibleMs?: number;
   hideCopyButton?: boolean;
   additionalActions?: ReadonlyArray<{
@@ -126,20 +124,15 @@ function errorDescriptionClampClass(type: unknown, description: unknown): string
   return "line-clamp-4";
 }
 
-const toastCornerDismissClass = "absolute z-20 -top-1.5 -right-1.5";
-const toastCornerOrbClass = cn(
-  "inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border/60 bg-popover/92 text-muted-foreground shadow-sm outline-none backdrop-blur-sm",
-  "transition-[color,background-color,box-shadow] hover:bg-popover hover:text-foreground",
-  "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-);
-
-function handleToastDismissClick(
-  manager: typeof toastManager | typeof anchoredToastManager,
-  toastId: ToastId,
-  onClose: (() => void) | undefined,
-) {
-  onClose?.();
-  manager.close(toastId);
+// Toasts have no close button. Timed toasts dismiss on their own; persistent ones
+// (timeout 0, or loading) can also be swiped away or dismissed by clicking a non-interactive area.
+function isPersistentToastDismissClick(
+  toast: { readonly timeout?: number | undefined; readonly type?: string | undefined },
+  target: EventTarget | null,
+): boolean {
+  if (toast.timeout !== 0 && toast.type !== "loading") return false;
+  if (!(target instanceof Element)) return true;
+  return target.closest("button, a, input, textarea, select, [role='button']") === null;
 }
 
 function CopyErrorButton({ text }: { text: string }) {
@@ -664,25 +657,17 @@ function Toasts({ position }: { position: ToastPosition }) {
                     ? ["left", isTop ? "up" : "down"]
                     : ["right", isTop ? "up" : "down"]
               }
+              onClick={(event) => {
+                if (isPersistentToastDismissClick(toast, event.target)) {
+                  toastManager.close(toast.id);
+                }
+              }}
               toast={toast}
             >
               <ThreadToastVisibleAutoDismiss
                 dismissAfterVisibleMs={toast.data?.dismissAfterVisibleMs}
                 toastId={toast.id}
               />
-              <div className={toastCornerDismissClass}>
-                <button
-                  aria-label="Dismiss notification"
-                  className={toastCornerOrbClass}
-                  data-slot="toast-close"
-                  onClick={() =>
-                    handleToastDismissClick(toastManager, toast.id, toast.data?.onClose)
-                  }
-                  type="button"
-                >
-                  <XIcon className="size-3" strokeWidth={2.25} />
-                </button>
-              </div>
               <Toast.Content
                 className={cn(
                   // overflow-x:clip preserves visible vertical overflow; hidden would force overflow-y:auto
@@ -761,23 +746,6 @@ function AnchoredToasts() {
                     </Toast.Content>
                   ) : (
                     <>
-                      <div className={toastCornerDismissClass}>
-                        <button
-                          aria-label="Dismiss notification"
-                          className={toastCornerOrbClass}
-                          data-slot="toast-close"
-                          onClick={() =>
-                            handleToastDismissClick(
-                              anchoredToastManager,
-                              toast.id,
-                              toast.data?.onClose,
-                            )
-                          }
-                          type="button"
-                        >
-                          <XIcon className="size-3" strokeWidth={2.25} />
-                        </button>
-                      </div>
                       <Toast.Content
                         className={cn(
                           "pointer-events-auto min-h-0 overflow-y-visible pl-3.5 text-sm [overflow-x:clip]",
