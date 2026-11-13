@@ -23,7 +23,7 @@ const compact = (value: string): string => value.toLowerCase().replace(/[^a-z0-9
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Mention handles per role: id, compact display name, and display-name words joined. */
+/** Mention handles per role: the id and the compacted display name ("uiuxdesigner"). */
 function mentionHandles(role: Role): string[] {
   const handles = new Set<string>([compact(role.id), compact(role.displayName)]);
   return [...handles].filter((h) => h.length > 0);
@@ -67,7 +67,11 @@ function keywordHits(text: string, keywords: ReadonlyArray<string>): string[] {
   return hits;
 }
 
-export function routeRole(text: string, roles: ReadonlyArray<Role> = ROLES): RouteResult {
+const EMAIL_REGEX = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+
+export function routeRole(rawText: string, roles: ReadonlyArray<Role> = ROLES): RouteResult {
+  // Email addresses are neither mentions nor keywords ("qa@example.com").
+  const text = rawText.replace(EMAIL_REGEX, " ");
   const mention = findMention(text, roles);
   if (mention) return mention;
 

@@ -35,7 +35,7 @@ export function globToRegExp(glob: string): RegExp {
           continue;
         }
         if (atSegmentStart && next === undefined) {
-          // trailing `**` -> anything below (but `dir/**` also matches `dir` via the `/?` below)
+          // trailing `**` -> anything below (`dir/**` matches files under dir, not `dir` itself)
           source += ".*";
           i += 2;
           continue;
@@ -57,7 +57,6 @@ export function globToRegExp(glob: string): RegExp {
     i += 1;
   }
 
-  // `dir/**` should not match the bare directory itself, which is fine for files.
   const regex = new RegExp(`^${source}$`);
   regexCache.set(glob, regex);
   return regex;
