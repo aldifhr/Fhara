@@ -1657,6 +1657,48 @@ describe("deriveMessagesTimelineRows", () => {
     });
   });
 
+  it("marks only the first assistant reply after a user message as opening a speaker group", () => {
+    const runId = RunId.make("speaker-run");
+    const time = (second: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, second)).toISOString();
+    const message = (id: string, second: number, role: "user" | "assistant"): TimelineEntry => ({
+      kind: "message",
+      id,
+      createdAt: time(second),
+      message: {
+        id: MessageId.make(id),
+        role,
+        text: id,
+        runId,
+        createdAt: time(second),
+        updatedAt: time(second),
+        streaming: false,
+      },
+    });
+    const deriveRows = (expandedRunIds: Set<RunId>) =>
+      deriveMessagesTimelineRows({
+        timelineEntries: [
+          message("prompt", 0, "user"),
+          message("reply-1", 5, "assistant"),
+          message("reply-2", 10, "assistant"),
+        ],
+        latestRun: { runId, status: "completed", startedAt: time(0), completedAt: time(20) },
+        isWorking: false,
+        expandedRunIds,
+        turnDiffSummaries: [],
+        supportsConversationRollback: false,
+      });
+
+    // Folded turn: the visible final reply carries the speaker line.
+    const folded = new Map(deriveRows(new Set()).map((row) => [row.id, row]));
+    expect(folded.get("prompt")).not.toHaveProperty("opensAssistantTurn");
+    expect(folded.get("reply-2")).toMatchObject({ opensAssistantTurn: true });
+
+    // Expanded turn: only the first reply does; the next one continues the group.
+    const expanded = new Map(deriveRows(new Set([runId])).map((row) => [row.id, row]));
+    expect(expanded.get("reply-1")).toMatchObject({ opensAssistantTurn: true });
+    expect(expanded.get("reply-2")).not.toHaveProperty("opensAssistantTurn");
+  });
+
   it("keeps the previous turn folded while a newly sent message awaits its turn", () => {
     const rows = deriveMessagesTimelineRows({
       timelineEntries: [

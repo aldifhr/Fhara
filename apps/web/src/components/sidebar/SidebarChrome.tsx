@@ -1,4 +1,11 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, PanelLeftCloseIcon, SettingsIcon, Share2Icon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ChartNoAxesColumnIcon,
+  PanelLeftCloseIcon,
+  SettingsIcon,
+  Share2Icon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
