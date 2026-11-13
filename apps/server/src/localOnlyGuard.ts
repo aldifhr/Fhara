@@ -1,17 +1,7 @@
 /**
- * Fhara has no login, sessions or pairing of its own: anything that can reach the server can
- * drive it. The server binds loopback only, and this guard closes the two ways a browser can
- * still get in from elsewhere:
- *
- * - DNS rebinding: a page on `evil.example` resolves its own name to 127.0.0.1 and talks to the
- *   server as a same-origin page. Its requests carry `Host: evil.example`, so every request
- *   whose Host is not a loopback name is refused.
- * - Cross-site requests: any other website can send requests (and open WebSockets) to
- *   `http://127.0.0.1:<port>` from the user's browser. Those carry the site's `Origin`, so any
- *   Origin that is not loopback or the desktop app's own is refused.
- *
- * Requests without an Origin (CLI tools, provider agents calling `/mcp`, top-level navigations)
- * pass on the Host check alone.
+ * Fhara has no login of its own and binds loopback only. This guard refuses requests whose Host
+ * is not a loopback name (DNS rebinding) and whose Origin is not loopback or the desktop app's
+ * (other websites). Requests without an Origin (CLI tools, agents on `/mcp`) pass on Host alone.
  */
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

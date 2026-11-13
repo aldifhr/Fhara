@@ -37,7 +37,9 @@ const portFlag = Flag.Int("port").pipe(
   Flag.optional,
 );
 const hostFlag = Flag.String("host").pipe(
-  Flag.withDescription("Loopback host to bind: localhost, 127.0.0.1 or ::1. Fhara refuses any other host."),
+  Flag.withDescription(
+    "Loopback host to bind: localhost, 127.0.0.1 or ::1. Fhara refuses any other host.",
+  ),
   Flag.optional,
 );
 export const baseDirFlag = Flag.String("base-dir").pipe(
@@ -93,7 +95,10 @@ const lanFlag = Flag.Boolean("lan").pipe(
 
 /** The only hosts Fhara binds: loopback names and addresses, never a wildcard or LAN address. */
 export function isLoopbackBindHost(host: string): boolean {
-  const normalized = host.trim().toLowerCase().replace(/^\[(.*)\]$/, "$1");
+  const normalized = host
+    .trim()
+    .toLowerCase()
+    .replace(/^\[(.*)\]$/, "$1");
   return (
     normalized === "localhost" ||
     normalized === "::1" ||
@@ -450,7 +455,8 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
   }
   if (tailscaleServeEnabled) {
     return yield* new CliError.UserError({
-      cause: "Fhara is local-only: Tailscale Serve (--tailscale-serve / T3CODE_TAILSCALE_SERVE) is not supported.",
+      cause:
+        "Fhara is local-only: Tailscale Serve (--tailscale-serve / T3CODE_TAILSCALE_SERVE) is not supported.",
     });
   }
   // `localhost` binds the loopback Node resolves first, which is the one the dev proxy

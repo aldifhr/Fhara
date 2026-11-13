@@ -31,19 +31,15 @@ describe("SSH environment IPC", () => {
 
   it.effect("refuses to open an SSH environment", () =>
     expectDisabled(
-      ensureSshEnvironment.handler(
-        { target: { alias: "devbox", hostname: "devbox", username: null, port: null } },
-
-      ),
+      ensureSshEnvironment.handler({
+        target: { alias: "devbox", hostname: "devbox", username: null, port: null },
+      }),
     ),
   );
 
   it.effect("refuses remote API requests, even on loopback", () =>
     expectDisabled(
-      fetchSshEnvironmentDescriptor.handler(
-        { httpBaseUrl: "http://127.0.0.1:41773/" },
-
-      ),
+      fetchSshEnvironmentDescriptor.handler({ httpBaseUrl: "http://127.0.0.1:41773/" }),
     ),
   );
 });

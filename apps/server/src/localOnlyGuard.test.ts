@@ -87,7 +87,11 @@ describe("isAllowedOrigin", () => {
 describe("checkLocalOnlyRequest", () => {
   it("allows a loopback Host with no Origin, as CLI tools and provider agents send", () => {
     expect(
-      checkLocalOnlyRequest({ host: "127.0.0.1:3773", origin: undefined, trustedOrigins: desktopOnly }),
+      checkLocalOnlyRequest({
+        host: "127.0.0.1:3773",
+        origin: undefined,
+        trustedOrigins: desktopOnly,
+      }),
     ).toEqual({ allowed: true });
   });
 
@@ -152,9 +156,9 @@ describe("LocalOnlyGuard.layer", () => {
         });
 
       expect(yield* call("http://127.0.0.1:3773/ping")).toEqual({ status: 200, body: "pong" });
-      expect(yield* call("http://localhost:3773/ping", { origin: "http://localhost:5173" })).toEqual(
-        { status: 200, body: "pong" },
-      );
+      expect(
+        yield* call("http://localhost:3773/ping", { origin: "http://localhost:5173" }),
+      ).toEqual({ status: 200, body: "pong" });
       expect((yield* call("http://127.0.0.1:3773/ping", { origin: "t3code://app" })).status).toBe(
         200,
       );
