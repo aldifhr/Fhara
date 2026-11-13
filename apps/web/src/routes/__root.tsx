@@ -49,7 +49,7 @@ import { useUiStateStore } from "../uiStateStore";
 import { configureClientTracing } from "../observability/clientTracing";
 import { resolveInitialServerAuthGateState } from "../environments/primary";
 import { GUEST_PAGE_PATH } from "../guestPage";
-import { hasHostedPairingRequest, isHostedStaticApp } from "../hostedPairing";
+import { isHostedStaticApp } from "../hostedPairing";
 import { useHostedPromptLinkLanding } from "../components/promptLinks/HostedPromptLinkLanding";
 import { isLocalEnvironmentDisabled } from "../localEnvironment";
 import { useAtomValue } from "@effect/atom-react";
@@ -68,14 +68,6 @@ export const Route = createRootRoute({
       return {
         authGateState: {
           status: "guest",
-        } as const,
-      };
-    }
-
-    if (location.pathname === "/pair" && hasHostedPairingRequest(new URL(window.location.href))) {
-      return {
-        authGateState: {
-          status: "hosted-pairing",
         } as const,
       };
     }
@@ -155,12 +147,7 @@ function RootRouteBranch() {
 
   if (pathname === GUEST_PAGE_PATH) return <Outlet />;
 
-  if (
-    pathname === "/pair" ||
-    pathname === "/connect" ||
-    pathname === "/connect-agent" ||
-    pathname === "/approve-agent"
-  ) {
+  if (pathname === "/connect" || pathname === "/connect-agent" || pathname === "/approve-agent") {
     return <Outlet />;
   }
 

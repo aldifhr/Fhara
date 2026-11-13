@@ -12,7 +12,6 @@ import {
   mcpClientScopes,
   sessionGrantsScope,
 } from "@t3tools/contracts";
-import { useNavigate } from "@tanstack/react-router";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import * as Option from "effect/Option";
 import { Atom } from "effect/reactivity";
@@ -175,9 +174,7 @@ function Wizard({
         ) : null}
       </WizardPanel>
       {open ? (
-        <WizardFooter
-          leading={step === 2 ? <ManageAccessButton environment={environment} /> : undefined}
-        >
+        <WizardFooter leading={undefined}>
           {step === 1 ? (
             <Button variant="outline" onClick={() => setStep(0)}>
               Back
@@ -461,7 +458,6 @@ function GateScreen({
                   <p className="text-sm text-destructive-foreground">
                     Your T3 Connect account is out of tunnels.
                   </p>
-                  <ManageAccessButton environment={environment} label="Manage tunnels" />
                 </>
               ) : null}
             </div>
@@ -822,23 +818,3 @@ function LinkedLine({
 }
 
 /** Opens Sharing & access on this environment, where its clients and T3 Connect tunnels live. */
-function ManageAccessButton({
-  environment,
-  label = "Manage access",
-}: {
-  readonly environment: EnvironmentPresentation;
-  readonly label?: string;
-}) {
-  const navigate = useNavigate();
-  return (
-    <Button
-      variant="ghost"
-      onClick={() => {
-        close();
-        void navigate({ to: "/settings/access", search: { machine: environment.environmentId } });
-      }}
-    >
-      {label}
-    </Button>
-  );
-}

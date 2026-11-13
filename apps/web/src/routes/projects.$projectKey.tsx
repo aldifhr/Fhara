@@ -6,7 +6,7 @@ export const Route = createFileRoute("/projects/$projectKey")({
       context.authGateState.status !== "authenticated" &&
       context.authGateState.status !== "hosted-static"
     ) {
-      throw redirect({ to: "/pair", replace: true });
+      throw new Error("This Fhara server refused this app.");
     }
     throw redirect({
       to: "/settings/projects",

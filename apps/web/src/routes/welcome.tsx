@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { EnvironmentId } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/welcome")({
   beforeLoad: ({ context }) => {
     const { authGateState } = context;
     if (authGateState.status !== "authenticated" && authGateState.status !== "hosted-static") {
-      throw redirect({ to: "/pair", replace: true });
+      throw new Error("This Fhara server refused this app.");
     }
   },
   component: WelcomeRouteView,

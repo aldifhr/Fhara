@@ -36,7 +36,7 @@ const ITEMS: ReadonlyArray<SettingsSearchItem> = [
   {
     id: "network-access",
     title: "Network access",
-    to: "/settings/access",
+    to: "/settings/labs",
     searchTerms: ["remote pairing backend"],
   },
   {
@@ -61,7 +61,7 @@ describe("searchSettings", () => {
   it("matches titles, sections, and remembered setting details", () => {
     expect(searchSettings("word", ITEMS).map((item) => item.id)).toEqual(["word-wrap"]);
     expect(searchSettings("network", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
-    expect(searchSettings("sharing", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
+    expect(searchSettings("labs", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
     expect(searchSettings("claude", ITEMS).map((item) => item.id)).toEqual(["providers"]);
     expect(searchSettings("long lines", ITEMS).map((item) => item.id)).toEqual(["word-wrap"]);
     const spanish = (message: string) => (message === "Word wrap" ? "Ajuste de línea" : message);
@@ -106,11 +106,8 @@ describe("searchSettings", () => {
     expect(searchSettings("pairing remote", ITEMS).map((item) => item.id)).toEqual([
       "network-access",
     ]);
-    expect(
-      searchSettings("remote pairing")
-        .slice(0, 2)
-        .map((item) => item.id),
-    ).toEqual(["network-access", "connections-environment"]);
+    // Fhara has no pairing or remote access settings left to find.
+    expect(searchSettings("remote pairing").map((item) => item.id)).not.toContain("network-access");
   });
 
   it("hides desktop-only settings from browser search", () => {
@@ -150,31 +147,6 @@ describe("searchSettings", () => {
       "linked-environments",
     ]);
     expect(available.map((item) => item.id).filter((id) => gatedIds.has(id))).toEqual([]);
-  });
-
-  it("finds linked environments on a remote host without local maintenance access", () => {
-    const availability = {
-      hasCloudPublicConfig: false,
-      hasEnvironment: true,
-      hasProviderSettingsEnvironment: true,
-      canManageLocalBackend: false,
-      localEnvironmentDisabled: true,
-      isWslSettingsRowVisible: false,
-      hasThreadAutoSettlement: false,
-    };
-    const results = (hasPeerLinkHost: boolean) =>
-      searchSettings(
-        "linked environments",
-        filterAvailableSettingsSearchItems({ ...availability, hasPeerLinkHost }),
-      );
-    expect(results(false).map((item) => item.id)).not.toContain("linked-environments");
-    expect(results(true)).toContainEqual(
-      expect.objectContaining({
-        id: "linked-environments",
-        to: "/settings/connections",
-        targetId: "linked-environments",
-      }),
-    );
   });
 
   it("finds the Welcome page only where a primary computer can open it", () => {
@@ -361,7 +333,7 @@ describe("source control host search items", () => {
   });
 
   it("finds the built-in hosts by their own words", () => {
-    expect(searchSettings("codeberg").map((item) => item.id)).toContain("source-control");
+    expect(searchSettings("github").map((item) => item.id)).toContain("source-control");
     expect(searchSettings("ghes").map((item) => item.id)).toContain(
       sourceControlHostSettingsSearchId("github"),
     );
@@ -373,14 +345,10 @@ describe("movedSettingsPath", () => {
     expect(movedSettingsPath("/settings/general", "text-generation-model")).toBe(
       "/settings/threads",
     );
-    expect(movedSettingsPath("/settings/connections", "authorized-clients")).toBe(
-      "/settings/access",
-    );
     expect(movedSettingsPath("/settings/source-control", "worktree-branch-naming")).toBe(
       "/settings/worktrees",
     );
     expect(movedSettingsPath("/settings/appearance", "diff-color-scheme")).toBe("/settings/diffs");
-    expect(movedSettingsPath("/settings/connections", "network-access")).toBe("/settings/access");
     expect(movedSettingsPath("/settings/storage", "storage-worktrees")).toBe("/settings/worktrees");
     expect(movedSettingsPath("/settings/storage", "")).toBe("/settings/maintenance");
     expect(movedSettingsPath("/settings/integrations", "devices")).toBe("/settings/devices");
@@ -390,7 +358,8 @@ describe("movedSettingsPath", () => {
   it("leaves current pages alone", () => {
     expect(movedSettingsPath("/settings/general", "time-format")).toBeNull();
     expect(movedSettingsPath("/settings/projects", "project-defaults")).toBeNull();
-    expect(movedSettingsPath("/settings/connections", "remote-environments")).toBeNull();
+    // Environments and Sharing & access are gone, so their old links are not redirected.
+    expect(movedSettingsPath("/settings/connections", "network-access")).toBeNull();
     expect(movedSettingsPath("/settings/appearance", "theme")).toBeNull();
   });
 });

@@ -33,8 +33,6 @@ export type SettingsPath =
   | "/settings/scheduled-tasks"
   | "/settings/source-control"
   | "/settings/worktrees"
-  | "/settings/connections"
-  | "/settings/access"
   | "/settings/secrets"
   | "/settings/maintenance"
   | "/settings/labs"
@@ -108,8 +106,6 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/scheduled-tasks": msg("Scheduled tasks"),
   "/settings/source-control": msg("Source control"),
   "/settings/worktrees": msg("Worktrees"),
-  "/settings/connections": msg("Environments"),
-  "/settings/access": msg("Sharing & access"),
   "/settings/secrets": msg("Secrets"),
   "/settings/maintenance": msg("Maintenance"),
   "/settings/labs": msg("Labs"),
@@ -151,14 +147,10 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: msg("Code"),
     paths: ["/settings/projects", "/settings/source-control", "/settings/worktrees"],
   },
-  {
-    heading: msg("Connections"),
-    paths: [
-      "/settings/connections",
-      "/settings/access",
-      ...(isSecretsFeatureEnabled ? (["/settings/secrets"] as const) : []),
-    ],
-  },
+  // Fhara serves only this machine, so Environments and Sharing & access are gone.
+  ...(isSecretsFeatureEnabled
+    ? [{ heading: msg("Connections"), paths: ["/settings/secrets"] as SettingsPath[] }]
+    : []),
   {
     heading: msg("More"),
     headingHidden: true,
@@ -1230,116 +1222,6 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["commands scripts setup run dev server checkout worktree t3.json import"],
   },
   {
-    id: "environment-icon",
-    title: "Environment icon",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["machine glyph sidebar mac mini studio laptop desktop server cloud vm"],
-  },
-  {
-    id: "local-environment",
-    title: "Local environment",
-    to: "/settings/connections",
-    searchTerms: ["turn off on disable enable local server agents remote only restart"],
-    desktopOnly: true,
-  },
-  {
-    id: "network-access",
-    title: "Network access",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["expose backend remote pairing local machine interfaces host restart"],
-    localBackendManagementOnly: true,
-  },
-  {
-    id: "tailscale-https",
-    title: "Tailscale HTTPS",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["serve magicdns endpoint remote secure network"],
-    desktopOnly: true,
-    localBackendManagementOnly: true,
-  },
-  {
-    id: "wsl-backend",
-    title: "WSL backend",
-    to: "/settings/access",
-    searchTerms: [
-      "windows subsystem linux distro second server projects stop windows backend restart wsl only",
-    ],
-    desktopOnly: true,
-    windowsOnly: true,
-    localBackendManagementOnly: true,
-    wslAvailableOnly: true,
-  },
-  {
-    id: "t3-connect",
-    localEnvironmentOnly: true,
-    title: "T3 Connect",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["managed tunnel cloud other devices remote tunnels limit t3 chat"],
-    desktopOnly: true,
-    cloudOnly: true,
-  },
-  {
-    id: "hold-webhooks-while-offline",
-    localEnvironmentOnly: true,
-    title: "Hold webhooks while offline",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["webhook automations offline queue mailbox t3 connect"],
-    cloudOnly: true,
-    managedTunnelOnly: true,
-  },
-  {
-    id: "publish-agent-activity",
-    localEnvironmentOnly: true,
-    title: "Publish agent activity",
-    to: "/settings/access",
-    targetId: "connections-environment",
-    searchTerms: ["mobile push notifications live activities cloud tunnel"],
-    cloudOnly: true,
-  },
-  {
-    id: "connections-environment",
-    title: "This machine",
-    to: "/settings/access",
-    searchTerms: [
-      "connections server backend local remote access administrative permissions scope pairing links qr code authorized clients sessions revoke endpoint",
-    ],
-  },
-  {
-    id: "linked-environments",
-    peerLinksOnly: true,
-    title: "Linked environments",
-    to: "/settings/connections",
-    targetId: "linked-environments",
-    searchTerms: ["link peer another machine vps agents work there handoff pairing code"],
-  },
-  {
-    id: "remote-environments",
-    title: "Environments",
-    to: "/settings/connections",
-    searchTerms: ["add pair backend host code ssh config agent tunnel saved t3 connect"],
-  },
-  {
-    id: "load-balancing",
-    title: "Load balancing",
-    to: "/settings/connections",
-    searchTerms: [
-      "automatic machine environment resources cpu memory capacity preference weight shared projects",
-    ],
-  },
-  {
-    id: "pull-request-routing",
-    title: "Pull request sharing",
-    to: "/settings/connections",
-    searchTerms: [
-      `pull request routing trusted environments shared credentials permissions read actions source control ${SOURCE_CONTROL_HOST_LABELS}`,
-    ],
-  },
-  {
     id: "secret-providers",
     title: "Secret providers",
     to: "/settings/secrets",
@@ -1382,8 +1264,6 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/devices": null,
   "/settings/source-control": "environment-defaults",
   "/settings/worktrees": "project-defaults",
-  "/settings/connections": "connections",
-  "/settings/access": "connections",
   "/settings/secrets": null,
   "/settings/scheduled-tasks": null,
   "/settings/maintenance": null,
@@ -1401,12 +1281,10 @@ const SPLIT_SETTINGS_PATHS: ReadonlySet<string> = new Set([
   "/settings/general",
   "/settings/appearance",
   "/settings/source-control",
-  "/settings/connections",
   ...Object.keys(RENAMED_SETTINGS_PATHS),
 ]);
 // Section anchors that moved but are not search results themselves.
 const MOVED_SECTION_ANCHORS: Readonly<Record<string, SettingsPath>> = {
-  "authorized-clients": "/settings/access",
   "text-generation": "/settings/threads",
   about: "/settings/about",
 };

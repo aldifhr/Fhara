@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 import { ThreadRouteView } from "../components/ThreadRouteView";
 import { isAppModalPage } from "../components/sidebar/mainAppLocation";
@@ -34,7 +34,11 @@ export const Route = createFileRoute("/_chat")({
       context.authGateState.status !== "authenticated" &&
       context.authGateState.status !== "hosted-static"
     ) {
-      throw redirect({ to: "/pair", replace: true });
+      throw new Error(
+        context.authGateState.status === "requires-auth"
+          ? (context.authGateState.errorMessage ?? "This Fhara server refused this app.")
+          : "This Fhara server refused this app.",
+      );
     }
     return { appModalPage: isAppModalPage(location.pathname) };
   },

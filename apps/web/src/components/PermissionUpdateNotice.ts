@@ -44,21 +44,10 @@ function showPermissionNotice(
   const id = toastManager.add({
     title: `Permissions have changed for ${label}`,
     description:
-      "This connection still uses the old permissions, so some actions may no longer be available. Pair again using a new link with the permissions you need.",
+      "This connection still uses the old permissions, so some actions may no longer be available. Reconnect to this machine's own Fhara server to get its current permissions.",
     timeout: 0,
     onClose: persistDismissal,
-    actionProps: {
-      children: "Open Sharing & access",
-      onClick: () => {
-        dismiss();
-        void router.navigate({ to: "/settings/access" });
-      },
-    },
-    data: {
-      actionLayout: "stacked-end",
-      secondaryActionProps: { children: "Dismiss", onClick: dismiss },
-      secondaryActionVariant: "ghost",
-    },
+    actionProps: { children: "Dismiss", onClick: dismiss },
   });
 }
 

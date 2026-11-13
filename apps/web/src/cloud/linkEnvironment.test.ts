@@ -24,7 +24,6 @@ import { type RpcSession } from "@t3tools/client-runtime/rpc";
 import { EnvironmentRegistry } from "@t3tools/client-runtime/connection";
 import { ManagedRelay } from "@t3tools/client-runtime/relay";
 import { layerRemoteHttpClient } from "@t3tools/client-runtime/rpc";
-import { __resetDesktopPrimaryAuthForTests } from "../environments/primary/desktopAuth";
 
 import { readCloudLinkState, unlinkEnvironmentFromCloud } from "./linkEnvironment";
 
@@ -193,7 +192,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  __resetDesktopPrimaryAuthForTests();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();

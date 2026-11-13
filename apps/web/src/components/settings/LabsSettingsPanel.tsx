@@ -116,11 +116,8 @@ function GuestLinksRow() {
       description={
         <>
           Share a thread with a guest who watches it live in a browser and sends messages you
-          approve. Needs T3 Connect: sign in and link this machine in{" "}
-          <Link to="/settings/access" className="underline underline-offset-2">
-            Sharing & access
-          </Link>
-          . Turning it off stops every guest link.
+          approve. Needs T3 Connect, which Fhara does not offer. Turning it off stops every guest
+          link.
         </>
       }
       control={
@@ -145,12 +142,9 @@ function LinkedEnvironmentsRow() {
       settingKeys={["linkedEnvironmentsEnabled"]}
       description={
         <>
-          Let agents here work on your other machines, and theirs here. Turn it on for each machine,
-          then link them in{" "}
-          <Link to="/settings/connections" className="underline underline-offset-2">
-            Connections
-          </Link>
-          . While off, nothing new starts over a link; running tasks finish.
+          Let agents here work on your other machines, and theirs here. Fhara does not link
+          machines, so this stays unused. While off, nothing new starts over a link; running tasks
+          finish.
         </>
       }
       control={

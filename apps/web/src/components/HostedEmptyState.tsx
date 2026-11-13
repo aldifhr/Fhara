@@ -1,6 +1,5 @@
 import { useAuth } from "@clerk/react";
 import type { EnvironmentId } from "@t3tools/contracts";
-import { Link } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
@@ -47,11 +46,7 @@ export function HostedEmptyState() {
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            {localEnvironmentOff ? (
-              <Button render={<Link to="/settings/connections" />} size="sm">
-                Open Environments
-              </Button>
-            ) : (
+            {localEnvironmentOff ? null : (
               <ol className="w-full space-y-4 text-left">
                 {cloudEnabled ? <T3ConnectSteps /> : <PairingSteps />}
               </ol>
@@ -120,11 +115,6 @@ function PairingSteps() {
     <>
       <SetupStep number={1}>
         <RunOnComputer command="t3 pair" />
-      </SetupStep>
-      <SetupStep number={2}>
-        <Button render={<Link to="/settings/connections" />} size="sm">
-          Add pairing link
-        </Button>
       </SetupStep>
     </>
   );

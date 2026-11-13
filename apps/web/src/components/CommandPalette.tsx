@@ -1213,7 +1213,8 @@ function OpenCommandPaletteDialog(props: {
 
   const openConnectionSettings = () => {
     setOpen(false);
-    void navigate({ to: "/settings/connections" });
+    // Fhara has only its local environment; its settings say why it is not connected.
+    void navigate({ to: "/settings/maintenance" });
   };
   const addProjectEntry = resolveAddProjectEntry(
     addProjectEnvironmentOptions,

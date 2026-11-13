@@ -49,7 +49,7 @@ describe("chat route commands", () => {
   });
 
   it("stays out of the way off the chat route and under modal pages", () => {
-    const { router, navigate } = routerAt([{ routeId: "__root__", pathname: "/pair" }]);
+    const { router, navigate } = routerAt([{ routeId: "__root__", pathname: "/connect-agent" }]);
     using stack = new DisposableStack();
     stack.defer(installChatRouteCommands(router));
     stack.defer(() => useThreadSelectionStore.getState().clearSelection());
