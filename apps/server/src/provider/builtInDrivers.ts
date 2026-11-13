@@ -5,65 +5,36 @@ import {
 import { AntigravityDriver, type AntigravityDriverEnv } from "./Drivers/AntigravityDriver.ts";
 import { ClaudeDriver, type ClaudeDriverEnv } from "./Drivers/ClaudeDriver.ts";
 import { CodexDriver, type CodexDriverEnv } from "./Drivers/CodexDriver.ts";
-import { CursorDriver, type CursorDriverEnv } from "@t3tools/provider-cursor/server";
-import { FxDriver, type FxDriverEnv } from "@t3tools/provider-fx/server";
-import { GrokDriver, type GrokDriverEnv } from "@t3tools/provider-grok/server";
 import { OpenCodeDriver, type OpenCodeDriverEnv } from "@t3tools/provider-opencode/server";
-import { MuseDriver, type MuseDriverEnv } from "@t3tools/provider-muse/server";
-import { PiDriver, type PiDriverEnv } from "@t3tools/provider-pi/server";
 import type {
   AnyProviderDriver,
   ProviderUsageReaderEnv,
 } from "@t3tools/provider-core/server/driver";
-import { KiroDriver, type KiroDriverEnv } from "@t3tools/provider-kiro/server";
 
+// Fhara lean set: Codex, Claude, OpenCode (the default writing engine), Antigravity and
+// ACP registry agents. Cursor, Grok, Fx, Kiro, Pi and Muse were removed in the P0 strip.
 export type BuiltInDriversEnv =
   | AcpRegistryDriverEnv
   | AntigravityDriverEnv
   | ClaudeDriverEnv
   | CodexDriverEnv
-  | CursorDriverEnv
-  | FxDriverEnv
-  | GrokDriverEnv
-  | KiroDriverEnv
-  | OpenCodeDriverEnv
-  | PiDriverEnv
-  | MuseDriverEnv;
+  | OpenCodeDriverEnv;
 
 export const BUILT_IN_DRIVERS: ReadonlyArray<AnyProviderDriver<BuiltInDriversEnv>> = [
   CodexDriver,
   ClaudeDriver,
-  CursorDriver,
-  GrokDriver,
-  FxDriver,
   OpenCodeDriver,
   AntigravityDriver,
-  KiroDriver,
-  PiDriver,
-  MuseDriver,
   AcpRegistryDriver,
 ];
 
 export type BuiltInUsageReadersEnv =
   | ProviderUsageReaderEnv<typeof ClaudeDriver>
   | ProviderUsageReaderEnv<typeof CodexDriver>
-  | ProviderUsageReaderEnv<typeof GrokDriver>
   | ProviderUsageReaderEnv<typeof OpenCodeDriver>
-  | ProviderUsageReaderEnv<typeof AntigravityDriver>
-  | ProviderUsageReaderEnv<typeof CursorDriver>
-  | ProviderUsageReaderEnv<typeof PiDriver>
-  | ProviderUsageReaderEnv<typeof MuseDriver>;
+  | ProviderUsageReaderEnv<typeof AntigravityDriver>;
 
 /** Order matters: aggregation keeps the first duplicate record. */
 export const BUILT_IN_USAGE_DRIVERS: ReadonlyArray<
   AnyProviderDriver<BuiltInDriversEnv, BuiltInUsageReadersEnv>
-> = [
-  ClaudeDriver,
-  CodexDriver,
-  GrokDriver,
-  PiDriver,
-  OpenCodeDriver,
-  MuseDriver,
-  AntigravityDriver,
-  CursorDriver,
-];
+> = [ClaudeDriver, CodexDriver, OpenCodeDriver, AntigravityDriver];

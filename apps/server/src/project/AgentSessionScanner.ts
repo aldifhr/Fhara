@@ -38,7 +38,6 @@ import * as ProviderSessionRuntime from "../persistence/ProviderSessionRuntime.t
 import { resolveCodexHomeLayout } from "../provider/Drivers/CodexHomeLayout.ts";
 import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/instanceEnvironment";
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
-import { piHome, resolvePiSessionsDir } from "@t3tools/provider-pi/server/usage";
 import * as ServerSettings from "../serverSettings.ts";
 import { sourceControlDefinitions } from "../sourceControl/sourceControlDefinitions.ts";
 import {
@@ -46,6 +45,30 @@ import {
   createTranscriptJsonSelector,
   TranscriptJsonLimitError,
 } from "./AgentSessionJson.ts";
+
+// Pi's session location, inlined from the removed provider-pi package so existing Pi
+// sessions can still be imported.
+function piHome(
+  environment: NodeJS.ProcessEnv,
+  hostHome: string,
+  platform: NodeJS.Platform,
+): string {
+  return (platform === "win32" ? environment.USERPROFILE : environment.HOME) || hostHome;
+}
+
+function resolvePiSessionsDir(
+  environment: NodeJS.ProcessEnv,
+  home: string,
+  path: Path.Path,
+): string {
+  const sessionDir = environment.PI_CODING_AGENT_SESSION_DIR?.trim();
+  if (sessionDir) return path.resolve(expandHomePath(sessionDir, home));
+  const agentDir = environment.PI_CODING_AGENT_DIR?.trim();
+  return path.resolve(
+    agentDir ? expandHomePath(agentDir, home) : path.join(home, ".pi", "agent"),
+    "sessions",
+  );
+}
 
 const TRANSCRIPT_PREFIX_BYTES = 32 * 1024;
 

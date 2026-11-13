@@ -15,11 +15,6 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } from "effect/http";
 
-import {
-  GROK_USAGE_URL,
-  GrokUsageResponse,
-  grokUsageResponseToLimits,
-} from "@t3tools/provider-grok/server";
 import { codexPlanLabel } from "../provider/CodexProvider.ts";
 import { codexRateLimitsToLimits } from "../provider/codexUsageLimits.ts";
 import { claudeUsageResponseToLimits } from "../provider/claudeUsageLimits.ts";
@@ -122,7 +117,6 @@ const decodeApiResponse = Schema.decodeUnknownEffect(ApiResponse);
 const decodeCreditList = Schema.decodeUnknownEffect(Schema.fromJsonString(CreditList));
 const decodeClaudeUsage = Schema.decodeUnknownEffect(Schema.fromJsonString(ClaudeUsage));
 const decodeCodexUsage = Schema.decodeUnknownEffect(Schema.fromJsonString(CodexUsage));
-const decodeGrokUsage = Schema.decodeUnknownEffect(Schema.fromJsonString(GrokUsageResponse));
 const decodeJson = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown));
 const isUsageLimitSourceError = Schema.is(UsageLimitSourceError);
 
@@ -290,7 +284,6 @@ const CODEX_HUB: HubProvider = {
   }),
 };
 
-const GROK_CLI_VERSION = "1.0.77";
 const ANTIGRAVITY_SUMMARY_URL =
   "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary";
 
@@ -336,25 +329,6 @@ const HUB_PROVIDERS = new Map<string, HubProvider>([
             checkedAt,
             response: { rate_limits_available: true, rate_limits: rateLimits },
           }).limits,
-        };
-      }),
-    },
-  ],
-  [
-    "xai",
-    {
-      driver: ProviderDriverKind.make("grok"),
-      header: () => ({
-        Authorization: "Bearer $TOKEN$",
-        "x-xai-token-auth": "xai-grok-cli",
-        "x-grok-client-version": GROK_CLI_VERSION,
-        "User-Agent": `grok-cli/${GROK_CLI_VERSION}`,
-      }),
-      read: Effect.fnUntraced(function* ({ account, call, checkedAt }) {
-        const usage = yield* decodeGrokUsage(yield* call(GROK_USAGE_URL));
-        return {
-          ...listedIdentity(account),
-          usageLimits: grokUsageResponseToLimits(usage, checkedAt),
         };
       }),
     },

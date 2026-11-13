@@ -29,13 +29,7 @@ const DRIVERS_WITH_REPLAY_FIXTURE_FILES = new Set([
   "acpRegistry",
   "claudeAgent",
   "codex",
-  "cursor",
-  "fx",
-  "grok",
-  "kiro",
-  "muse",
   "opencode",
-  "pi",
 ]);
 for (const fixture of ORCHESTRATOR_REPLAY_FIXTURES) {
   for (const provider of fixture.providers) {

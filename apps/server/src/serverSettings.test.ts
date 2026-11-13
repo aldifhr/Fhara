@@ -1454,8 +1454,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           },
           sourceControlHosts: {
             github: { tokens: { "github.com": "github-secret" } },
-            bitbucket: { email: "me@example.test", accessToken: "bitbucket-secret" },
-            gitcafe: { token: "gitcafe-secret" },
           },
           usageLimitSources: {
             [UsageLimitSourceId.make("hub")]: {
@@ -1481,8 +1479,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           "config-secret",
           "env-secret",
           "github-secret",
-          "bitbucket-secret",
-          "gitcafe-secret",
           "quota-secret",
           "expo-secret",
         ];
@@ -1496,7 +1492,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           assert.notInclude(disk, value);
         }
         assert.include(JSON.stringify(client), "https://example.test");
-        assert.include(JSON.stringify(client), "me@example.test");
         const echoed = yield* service.updateSettings({
           providerInstances: client.providerInstances,
           sourceControlHosts: client.sourceControlHosts,
@@ -1546,12 +1541,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
             field: "tokens",
             serverHost: "github.com",
           }),
-          sourceControlHostSecretName({
-            kind: "bitbucket",
-            field: "accessToken",
-            serverHost: null,
-          }),
-          sourceControlHostSecretName({ kind: "gitcafe", field: "token", serverHost: null }),
           "usage-limit-source-aHVi",
         ];
         for (const name of secretNames) {
@@ -1581,8 +1570,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           providerInstances: {},
           sourceControlHosts: {
             github: { tokens: {} },
-            bitbucket: { accessToken: "" },
-            gitcafe: { token: "" },
           },
           usageLimitSources: { [UsageLimitSourceId.make("hub")]: null },
         });
@@ -1655,39 +1642,25 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
 
         const saved = yield* serverSettings.updateSettings({
           sourceControlHosts: {
-            bitbucket: { email: "me@example.com", accessToken: "bb-access" },
             github: { tokens: { "github.com": "ghp_dotcom", "ghe.acme.test": "ghp_ghe" } },
           },
         });
-        assert.deepEqual(saved.sourceControlHosts.bitbucket, {
-          email: "me@example.com",
-          accessToken: "bb-access",
-        });
         const raw = yield* fileSystem.readFileString(serverConfig.settingsPath);
-        for (const secret of ["bb-access", "ghp_dotcom", "ghp_ghe"]) assert.notInclude(raw, secret);
-        assert.include(raw, "me@example.com");
+        for (const secret of ["ghp_dotcom", "ghp_ghe"]) assert.notInclude(raw, secret);
 
         const forClient = ServerSettingsModule.redactServerSettingsForClient(saved, {
           secretReferences: true,
         }).sourceControlHosts;
-        assert.equal(forClient.bitbucket?.email, "me@example.com");
-        assert.notInclude(String(forClient.bitbucket?.accessToken), "bb-access");
-        assert.isAbove(String(forClient.bitbucket?.accessToken).length, 0);
 
         yield* serverSettings.updateSettings({ sourceControlHosts: forClient });
-        yield* serverSettings.updateSettings({
-          sourceControlHosts: { bitbucket: { email: "other@example.com" } },
-        });
         const kept = (yield* serverSettings.getSettings).sourceControlHosts;
-        assert.deepEqual(kept.bitbucket, { email: "other@example.com", accessToken: "bb-access" });
         assert.deepEqual(kept.github?.tokens, {
           "github.com": "ghp_dotcom",
           "ghe.acme.test": "ghp_ghe",
         });
 
-        const cleared = yield* serverSettings.updateSettings({
+        yield* serverSettings.updateSettings({
           sourceControlHosts: {
-            bitbucket: { accessToken: "" },
             github: {
               tokens: {
                 "github.com": "",
@@ -1698,43 +1671,31 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
             },
           },
         });
-        assert.equal(cleared.sourceControlHosts.bitbucket?.accessToken, "");
         const stored = (kind: string, field: string, serverHost: string | null) =>
           secrets.get(sourceControlHostSecretName({ kind, field, serverHost }));
-        assert.isTrue(Option.isNone(yield* stored("bitbucket", "accessToken", null)));
         assert.isTrue(Option.isNone(yield* stored("github", "tokens", "github.com")));
         assert.isTrue(Option.isSome(yield* stored("github", "tokens", "ghe.acme.test")));
 
-        const reference = {
-          provider: SecretProviderId.make("personal"),
-          reference: "op://Private/Bitbucket/token",
-        };
         const gitHubReference = {
           provider: SecretProviderId.make("personal"),
           reference: "op://Private/GitHub/token",
         };
         yield* serverSettings.updateSettings({
           sourceControlHosts: {
-            bitbucket: { accessToken: "bb-access" },
             github: { tokens: { "github.com": "ghp_dotcom", "ghe.acme.test": "ghp_ghe" } },
           },
         });
-        assert.isTrue(Option.isSome(yield* stored("bitbucket", "accessToken", null)));
         assert.isTrue(Option.isSome(yield* stored("github", "tokens", "github.com")));
         const referenced = yield* serverSettings.updateSettings({
           sourceControlHosts: {
-            bitbucket: { accessToken: reference },
             github: { tokens: { "github.com": gitHubReference, "ghe.acme.test": "ghp_ghe" } },
           },
         });
-        assert.deepEqual(referenced.sourceControlHosts.bitbucket?.accessToken, reference);
-        assert.isTrue(Option.isNone(yield* stored("bitbucket", "accessToken", null)));
         assert.isTrue(Option.isNone(yield* stored("github", "tokens", "github.com")));
         assert.isTrue(Option.isSome(yield* stored("github", "tokens", "ghe.acme.test")));
         const redacted = ServerSettingsModule.redactServerSettingsForClient(referenced, {
           secretReferences: true,
         }).sourceControlHosts;
-        assert.deepEqual(redacted.bitbucket?.accessToken, reference);
         const tokens = redacted.github?.tokens as Record<string, unknown>;
         assert.deepEqual(tokens["github.com"], gitHubReference);
         assert.notEqual(tokens["ghe.acme.test"], "ghp_ghe");
@@ -1824,7 +1785,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           xai: SECRET_REDACTED,
           openrouter: "",
         });
-        assert.equal(legacy.sourceControlHosts.bitbucket?.accessToken, SECRET_REDACTED);
         assert.equal(legacy.usageLimitSources[hub]?.managementKey, SECRET_REDACTED);
         assert.equal(legacy.textGenerators[router]?.apiKey, SECRET_REDACTED);
         assert.equal(legacy.easDeviceHosts[0]?.accessToken, SECRET_REDACTED);
@@ -1842,7 +1802,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           simlockDeviceHosts: legacy.simlockDeviceHosts,
           providerInstances: legacy.providerInstances,
         });
-        assert.deepEqual(echoed.sourceControlHosts.bitbucket?.accessToken, reference);
         assert.deepEqual(echoed.sourceControlHosts.github?.tokens, {
           "github.com": gitHubReference,
           "ghe.acme.test": "ghp_ghe",
@@ -1890,7 +1849,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
           },
         },
         sourceControlHosts: {
-          bitbucket: { accessToken: personal("Bitbucket/token") },
           github: { tokens: { "github.com": personal("GitHub/token"), "ghe.acme.test": work } },
         },
         cloudSpeechCredentials: { openai: personal("Voice/key"), xai: work },
@@ -1932,7 +1890,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
         { name: "WORK_TOKEN", value: work, sensitive: true },
         { name: "PLAIN", value: "kept", sensitive: false },
       ]);
-      assert.equal(removed.sourceControlHosts.bitbucket?.accessToken, "");
       assert.deepEqual(removed.sourceControlHosts.github?.tokens, {
         "github.com": "",
         "ghe.acme.test": work,
@@ -1997,14 +1954,13 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
     }).pipe(Effect.provide(layerSettings));
   });
 
-  it.effect("moves the retired bitbucket and github keys and their secrets on load", () =>
+  it.effect("moves the retired github key and its secrets on load", () =>
     Effect.gen(function* () {
       const serverConfig = yield* ServerConfig.ServerConfig;
       const fileSystem = yield* FileSystem.FileSystem;
       const secrets = yield* ServerSecretStore.ServerSecretStore;
       const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
       const marker = "\u2022\u2022\u2022\u2022\u2022\u2022";
-      yield* secrets.set("bitbucket-access-token", new TextEncoder().encode("bb-saved"));
       yield* secrets.set(
         `github-token-${Buffer.from("github.com", "utf8").toString("base64url")}`,
         new TextEncoder().encode("ghp_saved"),
@@ -2012,7 +1968,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
       yield* fileSystem.writeFileString(
         serverConfig.settingsPath,
         JSON.stringify({
-          bitbucket: { email: "me@example.com", accessToken: marker },
           github: {
             hosts: { "github.com": { account: "work" } },
             tokens: { "github.com": marker },
@@ -2022,13 +1977,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
 
       const loaded = (yield* serverSettings.getSettings).sourceControlHosts;
 
-      assert.deepEqual(loaded.bitbucket, { email: "me@example.com", accessToken: "bb-saved" });
       assert.deepEqual(loaded.github?.tokens, { "github.com": "ghp_saved" });
       assert.deepEqual(loaded.github?.hosts, { "github.com": { account: "work" } });
       const raw = yield* fileSystem.readFileString(serverConfig.settingsPath);
-      assert.notInclude(raw, '"bitbucket":{"email"');
       assert.include(raw, "sourceControlHosts");
-      assert.isTrue(Option.isNone(yield* secrets.get("bitbucket-access-token")));
+      assert.notInclude(raw, "ghp_saved");
     }).pipe(Effect.provide(layerServerSettingsWithSecrets())),
   );
 
@@ -2041,12 +1994,14 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
         const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
         yield* fileSystem.writeFileString(
           serverConfig.settingsPath,
-          '{"sourceControlHosts":{"bitbucket":{"accessToken":"hand-edited-token"}}}',
+          '{"sourceControlHosts":{"github":{"tokens":{"github.com":"hand-edited-token"}}}}',
         );
 
         const loaded = yield* serverSettings.getSettings;
 
-        assert.equal(loaded.sourceControlHosts.bitbucket?.accessToken, "hand-edited-token");
+        assert.deepEqual(loaded.sourceControlHosts.github?.tokens, {
+          "github.com": "hand-edited-token",
+        });
         assert.notInclude(
           yield* fileSystem.readFileString(serverConfig.settingsPath),
           "hand-edited-token",
@@ -2679,7 +2634,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
   (it) => {
     const claude = ProviderDriverKind.make("claudeAgent");
     const codex = ProviderDriverKind.make("codex");
-    const cursor = ProviderDriverKind.make("cursor");
+    const antigravity = ProviderDriverKind.make("antigravity");
     const bedrock = { name: "CLAUDE_CODE_USE_BEDROCK", value: "1", sensitive: false };
     const policy: ManagedPolicyDocument = {
       schemaVersion: 1,
@@ -2704,40 +2659,43 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         const service = yield* ServerSettingsModule.ServerSettingsService;
         const config = yield* ServerConfig.ServerConfig;
         const fs = yield* FileSystem.FileSystem;
-        const cursorId = ProviderInstanceId.make("cursor_work");
+        const antigravityId = ProviderInstanceId.make("antigravity_work");
         yield* fs.writeFileString(
           config.settingsPath,
           JSON.stringify({
             providerInstances: {
-              [cursorId]: { driver: cursor, enabled: true },
+              [antigravityId]: { driver: antigravity, enabled: true },
               // A default instance id is no proof of its driver.
-              codex: { driver: cursor, enabled: true },
+              codex: { driver: antigravity, enabled: true },
             },
-            textGenerationModelSelection: { instanceId: cursorId, model: "auto" },
+            textGenerationModelSelection: { instanceId: antigravityId, model: "auto" },
           }),
         );
 
         const settings = yield* service.getSettings;
         // Never deleted: the instance stays for its threads, and the registry shows it unavailable.
-        assert.equal(settings.providerInstances[cursorId]?.driver, cursor);
+        assert.equal(settings.providerInstances[antigravityId]?.driver, antigravity);
         // Built-in text generation does not fall back onto a disallowed driver either.
         assert.equal(settings.textGenerationModelSelection.instanceId, "claudeAgent");
 
         const rejected = yield* service
           .updateProviderInstance({
             operation: "create",
-            instanceId: ProviderInstanceId.make("cursor_new"),
-            instance: { driver: cursor, enabled: true },
+            instanceId: ProviderInstanceId.make("antigravity_new"),
+            instance: { driver: antigravity, enabled: true },
           })
           .pipe(Effect.flip);
         assert.equal(rejected.operation, "use-disallowed-provider");
-        assert.equal(rejected.message, "Example Corp's policy does not allow the Cursor provider.");
+        assert.equal(
+          rejected.message,
+          "Example Corp's policy does not allow the Antigravity provider.",
+        );
         // Switching it on for one project is enabling it too.
         const perProject = yield* service
           .updateSettings({
             projectSettingsOverrides: {
               [ProjectId.make("project-a")]: {
-                providerInstances: { [cursorId]: { enabled: true } },
+                providerInstances: { [antigravityId]: { enabled: true } },
               },
             },
           })
@@ -2747,18 +2705,18 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         // The client echoes a default instance that was running before it was configured.
         yield* service.updateProviderInstance({
           operation: "upsert",
-          instanceId: ProviderInstanceId.make("cursor"),
-          instance: { driver: cursor, enabled: true },
+          instanceId: ProviderInstanceId.make("antigravity"),
+          instance: { driver: antigravity, enabled: true },
         });
 
         // Turning it off, or removing it, is still the user's call.
         yield* service.updateProviderInstance({
           operation: "upsert",
-          instanceId: cursorId,
-          instance: { driver: cursor, enabled: false },
+          instanceId: antigravityId,
+          instance: { driver: antigravity, enabled: false },
         });
-        yield* service.updateProviderInstance({ operation: "remove", instanceId: cursorId });
-        assert.isUndefined((yield* service.getSettings).providerInstances[cursorId]);
+        yield* service.updateProviderInstance({ operation: "remove", instanceId: antigravityId });
+        assert.isUndefined((yield* service.getSettings).providerInstances[antigravityId]);
       }).pipe(Effect.provide(layerServerSettings(policy))),
     );
 
