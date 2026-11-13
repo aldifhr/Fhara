@@ -23,7 +23,6 @@ import { Argument, Flag } from "effect/cli";
 import * as CliError from "effect/cli/CliError";
 
 import { readBootstrapEnvelope } from "../bootstrap.ts";
-import { resolveServiceLauncherMode } from "../cloud/serviceLauncherClient.ts";
 import * as ServerConfig from "../config.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
@@ -43,7 +42,7 @@ const hostFlag = Flag.String("host").pipe(
 );
 export const baseDirFlag = Flag.String("base-dir").pipe(
   Flag.withDescription(
-    "Explicit T3 Code data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME).",
+    "Explicit Fhara data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME).",
   ),
   Flag.optional,
 );
@@ -356,7 +355,7 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
       isProcessAlive(runtime.value.pid)
     ) {
       return yield* new CliError.UserError({
-        cause: `A T3 Code server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
+        cause: `A Fhara server is already running for ${baseDir} (pid ${runtime.value.pid}, ${runtime.value.origin}). Connect to that server, stop it before starting another, or use a different --base-dir.`,
       });
     }
   }
@@ -432,15 +431,13 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
   const privateNetworkOnly =
     Option.isNone(explicitHost) &&
     mode === "web" &&
-    (Option.isSome(lan)
-      ? lan.value
-      : yield* resolveServiceLauncherMode().pipe(
-          Effect.map((launcher) => launcher.managed),
-          Effect.orElseSucceed(() => false),
-        ));
-  const host = Option.getOrElse(explicitHost, () =>
-    privateNetworkOnly ? "0.0.0.0" : mode === "desktop" ? "127.0.0.1" : undefined,
-  );
+    // Fhara: LAN listening is opt-in (--lan / T3CODE_LAN=true), even for a managed service.
+    Option.isSome(lan) &&
+    lan.value;
+  // Fhara is local-only by default: without an explicit host or LAN opt-in it binds to
+  // loopback instead of every interface. `localhost` binds the loopback Node resolves first,
+  // which is the one the dev proxy (also Node) connects to.
+  const host = Option.getOrElse(explicitHost, () => (privateNetworkOnly ? "0.0.0.0" : "localhost"));
   const logLevel = Option.getOrElse(cliLogLevel, () => env.logLevel);
 
   const otel = yield* OtelEnvironment.load;

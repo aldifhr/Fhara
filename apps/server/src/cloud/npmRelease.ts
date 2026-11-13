@@ -27,6 +27,7 @@ const decodeError = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Struct({ error: Schema.Struct({ code: Schema.String }) })),
 );
 const decodeInput = Schema.decodeUnknownEffect(ServerNpmReleaseInput);
+const FHARA_NPM_RELEASE_LOOKUP_DISABLED: boolean = true;
 
 export class NpmRelease extends Context.Service<
   NpmRelease,
@@ -122,6 +123,9 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
           () => new ServerNpmReleaseError({ reason: "Invalid release version or track." }),
         ),
       );
+      // Fhara does not look up the upstream `t3` npm package: offering its releases would
+      // invite an update that replaces the fork.
+      if (FHARA_NPM_RELEASE_LOOKUP_DISABLED) return null;
       return yield* Cache.get(cache, spec);
     }),
   });

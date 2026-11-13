@@ -2704,6 +2704,8 @@ export const resolveGitHubPublishConfig = Effect.fn("resolveGitHubPublishConfig"
 
   const [owner, repo, ...rest] = rawRepo.split("/");
   if (!owner || !repo || rest.length > 0) return undefined;
+  // Fhara never bakes the upstream T3 Code release feed into its desktop builds.
+  if (owner.toLowerCase() === "pingdotgg") return undefined;
 
   return {
     provider: "github",

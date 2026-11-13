@@ -323,6 +323,13 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
     yield* input.validate(paths);
     return paths;
   }
+  // Fhara: never download the upstream T3 Code release (the default source) over the fork.
+  // A runtime can still come from an explicit mirror (T3CODE_RELEASE_BASE_URL or managed policy).
+  if (input.releaseBaseUrl === undefined || input.releaseBaseUrl.trim().length === 0) {
+    return yield* new PinnedRuntimeInstallError({
+      step: `finding a Fhara runtime ${input.version} (downloads from upstream Fhara releases are disabled; set T3CODE_RELEASE_BASE_URL to a Fhara release mirror)`,
+    });
+  }
   if (versionDirExists) {
     yield* fs.remove(paths.versionDir, { recursive: true, force: true }).pipe(
       Effect.mapError(

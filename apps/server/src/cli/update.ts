@@ -345,6 +345,14 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   const policy = yield* ManagedPolicy.ManagedPolicy;
   const mirror = managedUpdateMirror(policy.document);
 
+  // Fhara: `t3 update` would install the upstream T3 Code release over the fork, unless a
+  // Fhara release mirror is configured.
+  if (!mirror?.feedUrl && !environment[CLI_RELEASE_BASE_URL_ENV]?.trim()) {
+    return yield* new CliUpdateError({
+      reason:
+        "Fhara does not update from upstream Fhara releases. Pull the latest Fhara instead, or set T3CODE_RELEASE_BASE_URL to a Fhara release mirror.",
+    });
+  }
   const currentVersion = packageJson.version;
   const channel = input.channel ?? cliReleaseChannelOf(currentVersion);
   const refusal = managedUpdateRefusal(
@@ -444,8 +452,8 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
       : executableCurrent
         ? `Updating the background service ${serviceVersion ?? "(unknown version)"} -> ${targetVersion} (${targetChannel}).`
         : alreadyOnDisk
-          ? "Switching T3 Code"
-          : "Updating T3 Code",
+          ? "Switching Fhara"
+          : "Updating Fhara",
     executableCurrent
       ? ""
       : `${currentVersion} → ${targetVersion}${targetChannel === "stable" ? "" : ` (${targetChannel})`}`,
@@ -567,7 +575,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
     });
   }
 
-  progress.success(`Installed T3 Code ${targetVersion}`);
+  progress.success(`Installed Fhara ${targetVersion}`);
   if (Option.isSome(repointed)) {
     yield* Console.log("  Run t3 to get started.\n");
   } else {

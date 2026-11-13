@@ -336,6 +336,15 @@ function shouldBroadcastDownloadProgress(
   return nextStep !== previousStep || nextPercent === 100;
 }
 
+/**
+ * Fhara does not auto-update by default: upstream builds bake in a feed for the GitHub releases of
+ * pingdotgg/t3code, which would replace the fork with the upstream app. Update by pulling Fhara and
+ * rebuilding the desktop app. FHARA_DESKTOP_ENABLE_AUTO_UPDATE=1 opts back in for a feed Fhara
+ * publishes itself; the desktop build script refuses to bake in the upstream repository.
+ */
+export const FHARA_AUTO_UPDATE_DISABLED_REASON =
+  "Automatic updates are disabled in Fhara. Pull the latest Fhara and rebuild the desktop app instead.";
+
 function getAutoUpdateDisabledReason(args: {
   policy: DesktopUpdatePolicy.UpdatePolicy;
   isDevelopment: boolean;
@@ -344,8 +353,12 @@ function getAutoUpdateDisabledReason(args: {
   appImage?: string | undefined;
   isDebPackage: boolean;
   disabledByEnv: boolean;
+  enabledByFhara: boolean;
   hasUpdateFeedConfig: boolean;
 }): string | null {
+  if (!args.enabledByFhara) {
+    return FHARA_AUTO_UPDATE_DISABLED_REASON;
+  }
   if (args.policy.mode === "off") {
     return args.policy.message ?? "Updates are turned off on this machine.";
   }
@@ -478,6 +491,7 @@ export const make = Effect.gen(function* () {
         appImage: Option.getOrUndefined(config.appImagePath),
         isDebPackage,
         disabledByEnv: config.disableAutoUpdate,
+        enabledByFhara: config.fharaEnableAutoUpdate,
         hasUpdateFeedConfig: hasFeedConfig,
       }),
     );

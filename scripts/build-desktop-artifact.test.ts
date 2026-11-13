@@ -29,6 +29,7 @@ import {
   parseWslRuntimeArchiveMembers,
   readWorkspaceConfig,
   createBuildConfig,
+  resolveGitHubPublishConfig,
   DESKTOP_FILE_EXCLUSIONS,
   InvalidMacPasskeyRpDomainError,
   InvalidMacPasskeyPublishableKeyError,
@@ -539,11 +540,23 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(release.publish, [
         {
           provider: "github",
-          owner: "pingdotgg",
-          repo: "t3code",
+          owner: "aldifhr",
+          repo: "Fhara",
           releaseType: "release",
         },
       ]);
+    }).pipe(
+      Effect.provide(
+        ConfigProvider.layer(
+          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "aldifhr/Fhara" } }),
+        ),
+      ),
+    ),
+  );
+
+  it.effect("never publishes to the upstream T3 Code release feed", () =>
+    Effect.gen(function* () {
+      assert.isUndefined(yield* resolveGitHubPublishConfig("latest"));
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
@@ -620,7 +633,6 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       resolveMergedStageDependencies({
         platform: "mac",
         serverDependencies: {
-          "@cursor/sdk": "1.0.22",
           "@anthropic-ai/claude-agent-sdk": "^0.3.170",
           "@ff-labs/fff-node": "0.9.4",
           "@opencode-ai/sdk": "^1.3.15",
@@ -635,7 +647,6 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         fffNodeVersion: "0.9.4",
       }),
       {
-        "@cursor/sdk": "1.0.22",
         "@ff-labs/fff-node": "0.9.4",
         "node-pty": "1.1.0",
         "@napi-rs/keyring": "1.3.0",

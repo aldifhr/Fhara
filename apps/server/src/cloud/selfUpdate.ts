@@ -47,15 +47,23 @@ import { decodeServicePreflightResult } from "./servicePreflight.ts";
 import * as ServiceLauncherClient from "./serviceLauncherClient.ts";
 import { isExactServiceVersion } from "./serviceProtocol.ts";
 
+const FHARA_SELF_UPDATE_DISABLED: boolean = true;
+
 // A staged runtime's cold start can take over a minute on a loaded, swapping host.
 const PREFLIGHT_TIMEOUT = Duration.minutes(3);
 
-export function resolveServerSelfUpdateCapability(input: {
+/**
+ * Fhara never updates itself from upstream T3 Code releases: a remote update would replace
+ * the fork with the upstream `t3` build. Update by pulling the fork and restarting instead.
+ */
+export const FHARA_SELF_UPDATE_DISABLED_REASON =
+  "Self-update is disabled in Fhara. Pull the latest Fhara and restart the server instead.";
+
+export function resolveServerSelfUpdateCapability(_input: {
   readonly desktopManaged: boolean;
   readonly launcherManaged: boolean;
 }): ServerSelfUpdateCapability | null {
-  if (input.desktopManaged) return "desktop-managed" as const;
-  return input.launcherManaged ? ("boot-service" as const) : null;
+  return null;
 }
 
 export class ServerSelfUpdate extends Context.Service<
@@ -177,6 +185,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
   const update: ServerSelfUpdate["Service"]["update"] = Effect.fn(
     "cloud.server_self_update.update",
   )(function* (input, reportProgress = () => Effect.void, onHandoffAccepted = () => Effect.void) {
+    if (FHARA_SELF_UPDATE_DISABLED) return yield* failWith(FHARA_SELF_UPDATE_DISABLED_REASON);
     const policyRefusal = managedUpdateRefusal(
       policy.document,
       capability === "boot-service" ? cliReleaseChannelOf(input.targetVersion.trim()) : undefined,
@@ -196,14 +205,14 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
         );
       }
       return yield* failWith(
-        "This server is managed by the T3 Code desktop app on its machine; update the desktop app to update it.",
+        "This server is managed by the Fhara desktop app on its machine; update the desktop app to update it.",
       );
     }
     // The target must accept the launcher that will run it, which can be older than this server.
     const launcherProtocol = launcher.protocol;
     if (capability === null || launcherProtocol === undefined) {
       return yield* failWith(
-        "Remote updates require the T3 Code background service. Run `t3 service install` on the server machine.",
+        "Remote updates require the Fhara background service. Run `t3 service install` on the server machine.",
       );
     }
 

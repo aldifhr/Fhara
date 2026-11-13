@@ -102,6 +102,22 @@ describe("DesktopUpdates", () => {
     }),
   );
 
+  it.effect("stays off in Fhara unless FHARA_DESKTOP_ENABLE_AUTO_UPDATE opts in", () => {
+    const harness = makeHarness({ env: { FHARA_DESKTOP_ENABLE_AUTO_UPDATE: "false" } });
+
+    return Effect.scoped(
+      Effect.gen(function* () {
+        const updates = yield* DesktopUpdates.DesktopUpdates;
+        yield* updates.configure;
+
+        const state = yield* updates.getState;
+        assert.equal(state.status, "disabled");
+        assert.equal(state.message, DesktopUpdates.FHARA_AUTO_UPDATE_DISABLED_REASON);
+        assert.equal(harness.checkCount(), 0);
+      }),
+    ).pipe(Effect.provide(harness.layer));
+  });
+
   it.effect("keeps the disabled reason available after configuration and channel changes", () => {
     const harness = makeHarness({ env: { T3CODE_DISABLE_AUTO_UPDATE: "true" } });
     const reason = "Automatic updates are disabled by the T3CODE_DISABLE_AUTO_UPDATE setting.";
