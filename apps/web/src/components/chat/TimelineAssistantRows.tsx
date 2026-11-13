@@ -4,7 +4,7 @@ import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thr
 import { memo, use, useState } from "react";
 import { type ChatMessage, type TurnDiffSummary } from "../../types";
 import ChatMarkdown from "../ChatMarkdown";
-import { GitForkIcon, ReplyIcon } from "lucide-react";
+import { GitForkIcon, ReplyIcon, Share2Icon } from "lucide-react";
 import { captureAssistantMessageOpening } from "~/lib/assistantTextSelection";
 import { responseContextRecord } from "~/lib/composerContextRecords";
 import { Button } from "../ui/button";
@@ -46,6 +46,7 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
     <>
       <div className="relative min-w-0 px-1 py-0.5">
         <MessageAuthorHeading>Fhara</MessageAuthorHeading>
+        {row.opensAssistantTurn ? <AssistantSpeakerLine /> : null}
         <div data-thread-find-text="true">
           <AssistantCitationSource
             messageId={row.message.id}
@@ -93,6 +94,18 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
         ) : null}
       </div>
     </>
+  );
+}
+
+/** The avatar and name that open an assistant reply; the heading above already names it for screen readers. */
+function AssistantSpeakerLine() {
+  return (
+    <div aria-hidden className="mb-1.5 flex select-none items-center gap-2">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+        <Share2Icon strokeWidth={2} className="size-3" />
+      </span>
+      <span className="text-[13px] font-medium text-foreground/80">Fhara</span>
+    </div>
   );
 }
 

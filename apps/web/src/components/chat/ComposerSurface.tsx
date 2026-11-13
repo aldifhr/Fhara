@@ -39,6 +39,8 @@ function Host({ className, ...props }: ComponentProps<"div">) {
       data-slot="composer-host"
       className={cn(
         "relative z-10 w-full rounded-2xl shadow-composer after:z-1 dark:shadow-none",
+        // The outline firms up while the prompt has focus.
+        "after:transition-colors focus-within:after:border-foreground/20",
         "group-data-context-row/composer-surface:before:pointer-events-none group-data-context-row/composer-surface:before:absolute group-data-context-row/composer-surface:before:inset-0 group-data-context-row/composer-surface:before:-z-1 group-data-context-row/composer-surface:before:rounded-2xl group-data-context-row/composer-surface:before:bg-(--chat-composer-glass-surface)/(--glass-opacity) group-data-context-row/composer-surface:before:backdrop-blur-(--glass-blur) group-data-context-row/composer-surface:before:backdrop-saturate-(--glass-saturation)",
         outlineClasses,
         "group-has-data-[composer-banner-surface=attached]/composer-surface:shadow-none group-has-data-[composer-banner-surface=attached]/composer-surface:before:hidden group-has-data-[composer-banner-surface=attached]/composer-surface:after:hidden",

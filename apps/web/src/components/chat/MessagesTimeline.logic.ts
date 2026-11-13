@@ -604,6 +604,8 @@ type MessagesTimelineRowContent =
       groupedWithPrevious?: boolean;
       /** Set when the message above is a steer too, so the label shows once. */
       continuesSteer?: boolean;
+      /** The first assistant reply after a user message, which shows the speaker line. */
+      opensAssistantTurn?: boolean;
     }
   | {
       kind: "assistant-meta";
@@ -2308,9 +2310,18 @@ export function deriveMessagesTimelineRows(input: {
   const result = attachTrailingToolGroupsToAssistant(
     attachCreatedThreadSummaries(nextRows, timelineEntries, collapsedFoldMemberIds),
   );
+  // The role of the last message row seen, so an assistant reply that follows
+  // a user message (or opens the thread) can carry the speaker line.
+  let previousMessageRole: ChatMessage["role"] | null = null;
   return result.map((row, index) => {
     if (timelineRowIsWorkLog(row) && timelineRowIsWorkLog(result[index + 1])) {
       return { ...row, continuesWorkLog: true };
+    }
+    if (row.kind === "message") {
+      const opensAssistantTurn =
+        row.message.role === "assistant" && previousMessageRole !== "assistant";
+      previousMessageRole = row.message.role;
+      if (opensAssistantTurn) return { ...row, opensAssistantTurn: true };
     }
     if (!timelineRowIsOwnUserMessage(row)) return row;
     const previous = result[index - 1];
@@ -2786,7 +2797,8 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.revertTurnCount === bm.revertTurnCount &&
         a.groupedWithNext === bm.groupedWithNext &&
         a.groupedWithPrevious === bm.groupedWithPrevious &&
-        a.continuesSteer === bm.continuesSteer
+        a.continuesSteer === bm.continuesSteer &&
+        a.opensAssistantTurn === bm.opensAssistantTurn
       );
     }
   }
