@@ -57,7 +57,6 @@ import * as DesktopCliCommand from "./DesktopCliCommand.ts";
 import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
 import * as DesktopConnectionCatalogStore from "./DesktopConnectionCatalogStore.ts";
 import * as DesktopIpc from "../ipc/DesktopIpc.ts";
-import * as DesktopLocalEnvironmentAuth from "../backend/DesktopLocalEnvironmentAuth.ts";
 import * as DesktopManagedPolicy from "./DesktopManagedPolicy.ts";
 import * as DesktopPrimaryPaste from "./DesktopPrimaryPaste.ts";
 import * as DesktopSshEnvironment from "../ssh/DesktopSshEnvironment.ts";
@@ -222,7 +221,6 @@ it.effect.each([false, true])(
             Layer.mock(DesktopClientSettings.DesktopClientSettings, {}),
             Layer.mock(DesktopConnectionCatalogStore.DesktopConnectionCatalogStore, {}),
             Layer.mock(DesktopIpc.DesktopIpc, {}),
-            Layer.mock(DesktopLocalEnvironmentAuth.DesktopLocalEnvironmentAuth, {}),
             Layer.mock(DesktopManagedPolicy.DesktopManagedPolicy, {}),
             Layer.succeed(DesktopPrimaryPaste.DesktopPrimaryPaste, { enabled: true }),
             Layer.mock(DesktopSshEnvironment.DesktopSshEnvironment, {}),

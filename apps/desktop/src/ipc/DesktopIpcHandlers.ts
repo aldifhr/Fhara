@@ -36,7 +36,6 @@ import {
 import {
   getAppBranding,
   getLocalEnvironmentBootstraps,
-  getLocalEnvironmentBearerToken,
   installRelayTelemetryEnabled,
   getSystemLocale,
   getPreferredSystemLanguages,
@@ -106,7 +105,6 @@ export const installDesktopIpcHandlers = Effect.fn("desktop.ipc.installHandlers"
   yield* ipc.handleSync(getLocalEnvironmentEnabled);
   yield* ipc.handle(setLocalEnvironmentEnabled);
   yield* ipc.handle(getHostEnvironmentId);
-  yield* ipc.handle(getLocalEnvironmentBearerToken);
 
   yield* ipc.handle(getClientSettings);
   yield* ipc.handle(setClientSettings);

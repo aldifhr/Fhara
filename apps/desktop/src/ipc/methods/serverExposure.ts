@@ -6,10 +6,22 @@ import {
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 
-import * as DesktopLifecycle from "../../app/DesktopLifecycle.ts";
 import * as DesktopServerExposure from "../../backend/DesktopServerExposure.ts";
 import * as IpcChannels from "../channels.ts";
 import * as DesktopIpc from "../DesktopIpc.ts";
+
+// Fhara serves the local environment on loopback only. Network access and Tailscale Serve are
+// refused here, and DesktopServerExposure never widens the bind even for saved settings.
+export class DesktopServerExposureDisabledError extends Schema.TaggedError<DesktopServerExposureDisabledError>()(
+  "DesktopServerExposureDisabledError",
+  { request: Schema.Literals(["network-accessible", "tailscale-serve"]) },
+) {
+  override get message() {
+    return this.request === "tailscale-serve"
+      ? "Tailscale Serve is disabled in Fhara."
+      : "Network access is disabled in Fhara; the server only listens on this machine.";
+  }
+}
 
 const SetTailscaleServeEnabledInput = Schema.Struct({
   enabled: Schema.Boolean,
@@ -31,13 +43,11 @@ export const setServerExposureMode = DesktopIpc.makeIpcMethod({
   payload: DesktopServerExposureModeSchema,
   result: DesktopServerExposureStateSchema,
   handler: Effect.fn("desktop.ipc.serverExposure.setMode")(function* (mode) {
-    const lifecycle = yield* DesktopLifecycle.DesktopLifecycle;
-    const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
-    const change = yield* serverExposure.setMode(mode);
-    if (change.requiresRelaunch) {
-      yield* lifecycle.relaunch(`serverExposureMode=${mode}`);
+    if (mode !== "local-only") {
+      return yield* new DesktopServerExposureDisabledError({ request: "network-accessible" });
     }
-    return change.state;
+    const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
+    return yield* serverExposure.getState;
   }),
 });
 
@@ -46,15 +56,11 @@ export const setTailscaleServeEnabled = DesktopIpc.makeIpcMethod({
   payload: SetTailscaleServeEnabledInput,
   result: DesktopServerExposureStateSchema,
   handler: Effect.fn("desktop.ipc.serverExposure.setTailscaleServeEnabled")(function* (input) {
-    const lifecycle = yield* DesktopLifecycle.DesktopLifecycle;
-    const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
-    const change = yield* serverExposure.setTailscaleServeEnabled(input);
-    if (change.requiresRelaunch) {
-      yield* lifecycle.relaunch(
-        change.state.tailscaleServeEnabled ? "tailscale-serve-enabled" : "tailscale-serve-disabled",
-      );
+    if (input.enabled) {
+      return yield* new DesktopServerExposureDisabledError({ request: "tailscale-serve" });
     }
-    return change.state;
+    const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
+    return yield* serverExposure.getState;
   }),
 });
 
