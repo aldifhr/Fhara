@@ -167,6 +167,7 @@ import {
   RELAY_URL_SECRET,
 } from "./cloud/config.ts";
 import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
+import * as LocalOnlyGuard from "./localOnlyGuard.ts";
 import * as EnvironmentAuthPolicy from "./auth/EnvironmentAuthPolicy.ts";
 import * as CloudHttp from "./cloud/http.ts";
 import * as GuestHttp from "./guest/http.ts";
@@ -857,6 +858,8 @@ const layerMakeRoutes = Layer.mergeAll(
   Layer.provide(PreviewAutomationBroker.layer),
   Layer.provide(ServerSelfUpdate.layer.pipe(Layer.provide(layerDesktopAppUpdate))),
   Layer.provide(layerCommandReadiness),
+  // Fhara has no auth of its own: refuse anything not addressed from localhost or the desktop app.
+  Layer.provide(LocalOnlyGuard.layer),
   Layer.provide(ServerHttp.layerBrowserApiCors),
   Layer.provide(ServerHttp.layerHttpCompression),
 );

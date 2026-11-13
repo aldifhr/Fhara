@@ -37,7 +37,7 @@ const portFlag = Flag.Int("port").pipe(
   Flag.optional,
 );
 const hostFlag = Flag.String("host").pipe(
-  Flag.withDescription("Host/interface to bind (for example 127.0.0.1, 0.0.0.0, or a Tailnet IP)."),
+  Flag.withDescription("Loopback host to bind: localhost, 127.0.0.1 or ::1. Fhara refuses any other host."),
   Flag.optional,
 );
 export const baseDirFlag = Flag.String("base-dir").pipe(
@@ -86,10 +86,20 @@ const tailscaleServePortFlag = Flag.Int("tailscale-serve-port").pipe(
 );
 const lanFlag = Flag.Boolean("lan").pipe(
   Flag.withDescription(
-    "Accept connections from your local network and tailnet, not only this machine (equivalent to T3CODE_LAN).",
+    "Not supported: Fhara is local-only and refuses to start with --lan (or T3CODE_LAN=true).",
   ),
   Flag.optional,
 );
+
+/** The only hosts Fhara binds: loopback names and addresses, never a wildcard or LAN address. */
+export function isLoopbackBindHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase().replace(/^\[(.*)\]$/, "$1");
+  return (
+    normalized === "localhost" ||
+    normalized === "::1" ||
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(normalized)
+  );
+}
 
 export const traceFileConfig = Config.String("T3CODE_TRACE_FILE").pipe(
   Config.option,
@@ -424,20 +434,28 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     Option.fromUndefinedOr(env.host),
     Option.fromUndefinedOr(bootstrap?.host),
   );
-  // Private networks only, so clients learn a LAN address and prefer it over
-  // T3 Connect. `t3 service install` writes T3CODE_LAN=false for a new
-  // service; one installed before T3CODE_LAN existed keeps listening.
+  // Fhara has no auth of its own, so it only ever listens on loopback. LAN listening
+  // (--lan / T3CODE_LAN), a non-loopback --host and Tailscale Serve are refused.
   const lan = resolveOptionPrecedence(normalizedFlags.lan, Option.fromUndefinedOr(env.lan));
-  const privateNetworkOnly =
-    Option.isNone(explicitHost) &&
-    mode === "web" &&
-    // Fhara: LAN listening is opt-in (--lan / T3CODE_LAN=true), even for a managed service.
-    Option.isSome(lan) &&
-    lan.value;
-  // Fhara is local-only by default: without an explicit host or LAN opt-in it binds to
-  // loopback instead of every interface. `localhost` binds the loopback Node resolves first,
-  // which is the one the dev proxy (also Node) connects to.
-  const host = Option.getOrElse(explicitHost, () => (privateNetworkOnly ? "0.0.0.0" : "localhost"));
+  if (Option.isSome(lan) && lan.value) {
+    return yield* new CliError.UserError({
+      cause:
+        "Fhara is local-only: --lan / T3CODE_LAN is not supported. Remove it to start the server on localhost.",
+    });
+  }
+  if (Option.isSome(explicitHost) && !isLoopbackBindHost(explicitHost.value)) {
+    return yield* new CliError.UserError({
+      cause: `Fhara is local-only and refuses to bind ${explicitHost.value}. Use localhost, 127.0.0.1 or ::1.`,
+    });
+  }
+  if (tailscaleServeEnabled) {
+    return yield* new CliError.UserError({
+      cause: "Fhara is local-only: Tailscale Serve (--tailscale-serve / T3CODE_TAILSCALE_SERVE) is not supported.",
+    });
+  }
+  // `localhost` binds the loopback Node resolves first, which is the one the dev proxy
+  // (also Node) connects to.
+  const host = Option.getOrElse(explicitHost, () => "localhost");
   const logLevel = Option.getOrElse(cliLogLevel, () => env.logLevel);
 
   const otel = yield* OtelEnvironment.load;
@@ -502,7 +520,6 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
     ...derivedPaths,
     serverTracePath,
     host,
-    ...(privateNetworkOnly ? { privateNetworkOnly } : {}),
     staticDir,
     devUrl,
     ...(devAuthToken === undefined ? {} : { devAuthToken }),

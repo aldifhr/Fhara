@@ -910,7 +910,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }),
   );
 
-  it.effect("listens on private networks only per T3CODE_LAN, else on localhost", () =>
+  it.effect("listens on localhost only and refuses LAN, wildcard and Tailscale Serve", () =>
     Effect.gen(function* () {
       const { join } = yield* Path.Path;
       const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-service-host");
@@ -939,25 +939,38 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             off: () => undefined,
           }),
         );
+      const refusal = (input: Parameters<typeof resolveHost>[0]) =>
+        resolveHost(input).pipe(
+          Effect.flip,
+          Effect.map((error) => String((error as { readonly cause?: unknown }).cause ?? error)),
+        );
 
-      // Fhara: a service without T3CODE_LAN stays on localhost.
       expect(yield* resolveHost({ connected: true })).toEqual({
         host: "localhost",
         privateNetworkOnly: undefined,
       });
       // `service.env` reaches the server as its environment.
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_HOST: "127.0.0.1" } })).toEqual({
-        host: "127.0.0.1",
-        privateNetworkOnly: undefined,
-      });
+      for (const host of ["127.0.0.1", "::1", "[::1]", "localhost"]) {
+        expect(yield* resolveHost({ connected: true, env: { T3CODE_HOST: host } })).toEqual({
+          host,
+          privateNetworkOnly: undefined,
+        });
+      }
       expect(yield* resolveHost({ connected: true, env: { T3CODE_LAN: "false" } })).toEqual({
         host: "localhost",
         privateNetworkOnly: undefined,
       });
-      expect(yield* resolveHost({ connected: false, env: { T3CODE_LAN: "true" } })).toEqual({
-        host: "0.0.0.0",
-        privateNetworkOnly: true,
-      });
+      expect(yield* refusal({ connected: false, env: { T3CODE_LAN: "true" } })).toContain(
+        "T3CODE_LAN is not supported",
+      );
+      for (const host of ["0.0.0.0", "::", "192.168.1.20", "100.64.0.7", "my-mac.ts.net"]) {
+        expect(yield* refusal({ connected: true, env: { T3CODE_HOST: host } })).toContain(
+          "refuses to bind",
+        );
+      }
+      expect(
+        yield* refusal({ connected: true, env: { T3CODE_TAILSCALE_SERVE: "true" } }),
+      ).toContain("Tailscale Serve");
       // Without the launcher's IPC channel the context was inherited, e.g. by
       // `t3 serve` started from an agent inside the service.
       expect(yield* resolveHost({ connected: false })).toEqual({
