@@ -8,8 +8,3 @@ import * as GitHub from "@t3tools/source-control-github/shared/definition";
 export const builtInSourceControlDefinitions = makeSourceControlDefinitionRegistry([
   GitHub.definition,
 ]);
-
-/** GitCafe was removed, so pull request URLs pass through unchanged. Kept for callers. */
-export function canonicalizeGitCafePullRequestUrl(value: string): string {
-  return value;
-}

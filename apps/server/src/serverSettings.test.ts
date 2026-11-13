@@ -1917,13 +1917,14 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
   );
 
   it.effect("keeps the retired keys for another load when a token cannot be copied", () => {
+    const legacySecretName = `github-token-${Buffer.from("github.com", "utf8").toString("base64url")}`;
     const cause = new ServerSecretStore.SecretStoreReadError({
-      resource: "bitbucket-access-token",
+      resource: legacySecretName,
       cause: PlatformError.systemError({
         _tag: "PermissionDenied",
         module: "FileSystem",
         method: "readFile",
-        pathOrDescriptor: "bitbucket-access-token",
+        pathOrDescriptor: legacySecretName,
         description: "Secret backend unavailable.",
       }),
     });
@@ -1944,7 +1945,10 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("server settings"
       const fileSystem = yield* FileSystem.FileSystem;
       const serverSettings = yield* ServerSettingsModule.ServerSettingsService;
       const legacy = JSON.stringify({
-        bitbucket: { email: "me@example.com", accessToken: "\u2022\u2022\u2022\u2022\u2022\u2022" },
+        github: {
+          hosts: { "github.com": { account: "work" } },
+          tokens: { "github.com": "\u2022\u2022\u2022\u2022\u2022\u2022" },
+        },
       });
       yield* fileSystem.writeFileString(serverConfig.settingsPath, legacy);
 
