@@ -14,12 +14,12 @@ import { usePreparedConnection } from "~/state/session";
 import { isDesktopLocalConnectionTarget } from "~/connection/desktopLocal";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
 
-export function formatDesktopSshTarget(target: DesktopSshEnvironmentTarget): string {
+function formatDesktopSshTarget(target: DesktopSshEnvironmentTarget): string {
   const authority = target.username ? `${target.username}@${target.hostname}` : target.hostname;
   return target.port ? `${authority}:${target.port}` : authority;
 }
 
-export function environmentTransportLabel(
+function environmentTransportLabel(
   environment: EnvironmentPresentation,
   activeTarget: ConnectionTarget | null = null,
 ): string {
@@ -57,12 +57,6 @@ export function useEnvironmentTransportLabel(environment: EnvironmentPresentatio
       ? prepared.value.target
       : null,
   );
-}
-
-export function EnvironmentTransportLabel(props: {
-  readonly environment: EnvironmentPresentation;
-}) {
-  return useEnvironmentTransportLabel(props.environment);
 }
 
 export function EnvironmentRow({

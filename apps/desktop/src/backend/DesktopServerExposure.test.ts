@@ -3,9 +3,7 @@ import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
-import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
-import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -27,16 +25,6 @@ const lanNetworkInterfaces: DesktopNetworkInterfaces.NetworkInterfaces = {
   en0: [
     {
       address: "192.168.1.20",
-      family: "IPv4",
-      internal: false,
-    },
-  ],
-};
-
-const tailnetNetworkInterfaces: DesktopNetworkInterfaces.NetworkInterfaces = {
-  tailscale0: [
-    {
-      address: "100.90.1.2",
       family: "IPv4",
       internal: false,
     },
@@ -215,5 +203,4 @@ describe("DesktopServerExposure", () => {
       }),
     ),
   );
-
 });

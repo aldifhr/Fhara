@@ -103,7 +103,7 @@ const LOCAL_OWNER_REFUSED_MESSAGE =
 let bootstrapPromise: Promise<ServerAuthGateState> | null = null;
 let resolvedAuthenticatedGateState: ServerAuthGateState | null = null;
 
-export async function fetchSessionState(): Promise<AuthSessionState> {
+async function fetchSessionState(): Promise<AuthSessionState> {
   return retryTransientBootstrap(async () => {
     try {
       return await runPrimaryHttp(
