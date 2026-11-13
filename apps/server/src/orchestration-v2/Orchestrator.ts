@@ -195,6 +195,7 @@ import {
   ThreadForkServiceV2,
 } from "./ThreadForkService.ts";
 import { planThreadDeletion } from "./ThreadDeletion.ts";
+import { appendScopeWarning, delegatedScopeWarning } from "../roles/delegatedScope.ts";
 import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
 import * as ServerSettings from "../serverSettings.ts";
 
@@ -13968,6 +13969,14 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
 
       const now = yield* DateTime.now;
       const result = subagentResultForRun(childProjection, { ...childRun, status: outcome });
+      // Role write-scope check for worktree children; the warning rides on the result, nothing is reverted.
+      const scopeWarning = yield* Effect.promise(() =>
+        delegatedScopeWarning({
+          prompt: task.prompt,
+          worktreePath: childControls.thread.worktreePath,
+          runs: childControls.runs,
+        }),
+      );
       const parentRun =
         task.runId === null
           ? undefined
@@ -13980,7 +13989,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         ...task,
         providerThreadId: childRun.providerThreadId,
         status: terminalStatus,
-        result: result.text,
+        result: appendScopeWarning(result.text, scopeWarning),
         completedAt: now,
         updatedAt: now,
         // The cancelling parent gets no wake, and the task records the run it settled from.
