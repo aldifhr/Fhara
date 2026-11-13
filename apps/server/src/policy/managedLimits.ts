@@ -68,22 +68,27 @@ export function allowsAuthPolicy(policy: PolicyDocument, authPolicy: ServerAuthP
   );
 }
 
-/** Whether anything off this machine may pair, by LAN, Tailscale, or a minted link. */
-export const allowsRemoteClients = (policy: PolicyDocument) =>
-  allowsAuthPolicy(policy, "remote-reachable");
+/**
+ * Whether anything off this machine may pair, by LAN, Tailscale, or a minted link. Fhara serves
+ * only its local owner, so this is always false, whatever the policy file says; pairing, LAN and
+ * Tailscale exposure stay refused through the same error the managed policy used.
+ */
+export const allowsRemoteClients = (_policy: PolicyDocument): boolean => false;
 
-/** T3 Connect is a way for remote clients in, so a policy without `remote` turns it off too. */
-export const allowsConnect = (policy: PolicyDocument) =>
-  policy.document?.limits?.connect !== false && allowsRemoteClients(policy);
+/** T3 Connect (the cloud relay) is a way for remote clients in, so it is always off too. */
+export const allowsConnect = (_policy: PolicyDocument): boolean => false;
 
 const refuse = (policy: PolicyDocument, action: string, detail?: string) =>
   new ManagedPolicyRefusedError({
-    organization: policy.document?.organization ?? "Your organization",
+    organization: policy.document?.organization ?? "Fhara",
     action,
     ...(detail === undefined ? {} : { detail }),
   });
 
-export const refuseConnect = (policy: PolicyDocument) => refuse(policy, "T3 Connect");
+/** Fhara itself refuses remote access, so its refusals name Fhara rather than an organization. */
+const FHARA: PolicyDocument = { document: undefined };
+
+export const refuseConnect = (_policy: PolicyDocument) => refuse(FHARA, "T3 Connect");
 
 // Node throws ENOTDIR, outside the spawner's error mapping, when PATH ends in a file.
 const isMissingCli = (cause: unknown) =>
@@ -108,7 +113,9 @@ export const closeTailscaleServeTo = Effect.fn("managedLimits.closeTailscaleServ
   policy: PolicyDocument,
   target: { readonly host: string; readonly port: number },
 ) {
-  if (allowsRemoteClients(policy)) return;
+  // Without a policy file nothing was ever allowed to forward here, and the localhost guard
+  // refuses forwarded requests anyway, so the Tailscale CLI is only consulted under a policy.
+  if (policy.document === undefined) return;
   // Another app holds the port, so its routes are not ours to remove. It could let go before the
   // bind, which would then take over those routes, so the server does not start.
   if (!(yield* (yield* NetService.NetService).canListenOnHost(target.port, target.host))) {
@@ -199,8 +206,8 @@ export const closeTailscaleServeTo = Effect.fn("managedLimits.closeTailscaleServ
   });
 });
 
-export const refuseRemoteClients = (policy: PolicyDocument, detail?: string) =>
-  refuse(policy, AUTH_POLICY_ACTION["remote-reachable"], detail);
+export const refuseRemoteClients = (_policy: PolicyDocument, detail?: string) =>
+  refuse(FHARA, AUTH_POLICY_ACTION["remote-reachable"], detail);
 
 /**
  * Fails when the server would accept clients the policy leaves out; otherwise returns the address
@@ -230,7 +237,6 @@ export const checkServerReachability = Effect.fn("managedLimits.checkServerReach
         ? cannotListen()
         : refuse(policy, AUTH_POLICY_ACTION[input.authPolicy]);
     }
-    if (allowsRemoteClients(policy)) return input.host ?? "127.0.0.1";
     if (input.tailscaleServeEnabled) {
       return yield* refuseRemoteClients(policy, "so Tailscale Serve cannot be turned on");
     }

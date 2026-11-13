@@ -23,7 +23,7 @@ import * as ServerConfig from "./config.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as ServerLogger from "./serverLogger.ts";
 import {
-  announceStartupPairingUrl,
+  announceStartupUrl,
   logBrowserAutoOpenUnavailable,
   maybeOpenBrowser,
 } from "./serverRuntimeStartup.ts";
@@ -244,7 +244,7 @@ describe("ServerLoggerLive", () => {
   describe("startup pairing URL", () => {
     const pairingToken = "PAIRTOKEN7Q4K9";
     const pairingUrl = `http://localhost:3773/pair#token=${pairingToken}`;
-    const announce = announceStartupPairingUrl(pairingUrl).pipe(
+    const announce = announceStartupUrl(pairingUrl).pipe(
       Effect.andThen(logBrowserAutoOpenUnavailable),
     );
 
@@ -256,12 +256,12 @@ describe("ServerLoggerLive", () => {
         );
 
         const body = requests.map((request) => request.body).join("\n");
-        assert.include(body, "Authentication required");
+        assert.include(body, "Fhara is ready");
         assert.notInclude(body, pairingToken);
         const printed = (yield* TestConsole.logLines).map((line) =>
           Array.isArray(line) ? line.join(" ") : String(line),
         );
-        assert.isTrue(printed.some((line) => line.includes(`pairingUrl: ${pairingUrl}`)));
+        assert.isTrue(printed.some((line) => line.includes(`url: ${pairingUrl}`)));
       }).pipe(Effect.provide(TestConsole.layer)),
     );
 
@@ -272,7 +272,7 @@ describe("ServerLoggerLive", () => {
         const events = JSON.stringify(
           spans.flatMap((span) => span.events.map(([name, , attributes]) => [name, attributes])),
         );
-        assert.include(events, "Authentication required");
+        assert.include(events, "Fhara is ready");
         assert.notInclude(events, pairingToken);
       }).pipe(Effect.provide(TestConsole.layer)),
     );

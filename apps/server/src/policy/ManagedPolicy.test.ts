@@ -63,7 +63,12 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
           limits: { webhookTasks: false, telemetry: true },
         }),
       );
-      assert.deepEqual(policy.summary?.limits, { webhookTasks: false, telemetry: true });
+      // Fhara never allows T3 Connect, so every summary says so.
+      assert.deepEqual(policy.summary?.limits, {
+        connect: false,
+        webhookTasks: false,
+        telemetry: true,
+      });
       assert.equal(ManagedPolicy.deniedBy(policy, "webhookTasks"), "Example Corp");
       assert.isUndefined(ManagedPolicy.deniedBy(policy, "telemetry"));
     }),
@@ -178,7 +183,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
         }),
       );
       const { providers, ...limits } = policy.summary?.limits ?? {};
-      assert.deepEqual(limits, { maxRuntimeMode: "auto-accept-edits" });
+      assert.deepEqual(limits, { maxRuntimeMode: "auto-accept-edits", connect: false });
       // Under a ceiling, each driver's launch configuration is the administrator's.
       assert.deepEqual(providers?.lockedInstanceFields?.[ProviderDriverKind.make("claudeAgent")], [
         "config.binaryPath",
@@ -390,6 +395,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
         }),
       );
       assert.deepEqual<unknown>(policy.summary?.limits, {
+        connect: false,
         providers: {
           allowedDrivers: ["claudeAgent", "codex"],
           lockedInstanceFields: {
@@ -451,7 +457,7 @@ it.layer(NodeServices.layer)("ManagedPolicy.load", (it) => {
         };
         const policy = yield* loadFrom(JSON.stringify({ ...base, limits: { updates } }));
         const { feedUrl: _feedUrl, ...clientUpdates } = updates;
-        assert.deepEqual(policy.summary?.limits, { updates: clientUpdates });
+        assert.deepEqual(policy.summary?.limits, { connect: false, updates: clientUpdates });
         for (const invalid of [
           { mode: "auto", feedUrl: "http://updates.example/t3" },
           { mode: "manual" },

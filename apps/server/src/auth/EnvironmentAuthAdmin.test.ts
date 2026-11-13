@@ -60,17 +60,18 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         const environmentAuth = yield* EnvironmentAuth.EnvironmentAuth;
 
         const error = yield* environmentAuth.issuePairingCredential().pipe(Effect.flip);
-        const startup = yield* environmentAuth.issueStartupPairingCredential();
+        // An MCP approval code signs in an agent on this machine through /mcp only.
+        const approval = yield* environmentAuth.issuePairingCredential({ access: "auto" });
 
         assert.equal(
           error.message,
-          "Example Corp's policy does not allow remote clients, so this server cannot create pairing links.",
+          "Fhara's policy does not allow remote clients, so this server cannot create pairing links.",
         );
-        assert.isAbove(startup.credential.length, 0);
+        assert.isAbove(approval.credential.length, 0);
       }).pipe(Effect.provide(layerEnvironmentAuth(undefined, desktopAndLocalOnly))),
     );
 
-    it.effect("revokes link-paired clients on startup under a policy without remote clients", () =>
+    it.effect("revokes link-paired clients on startup but keeps MCP approval codes", () =>
       Effect.gen(function* () {
         const sessions = yield* SessionStore.SessionStore;
         const pairingLinks = yield* PairingGrantStore.PairingGrantStore;
@@ -84,8 +85,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
           });
         const startupPhone = yield* startup("192.168.1.20");
         const startupBrowser = yield* startup("127.0.0.1");
-        yield* environmentAuth.createPairingLink({ subject: "one-time-token" });
-        yield* environmentAuth.issuePairingCredential({ access: "auto" });
+        const deviceLink = yield* pairingLinks.issueOneTimeToken({
+          scopes: AuthStandardClientScopes,
+          subject: "one-time-token",
+        });
+        const approval = yield* environmentAuth.issuePairingCredential({ access: "auto" });
 
         yield* EnvironmentAuth.make.pipe(
           Effect.provide(
@@ -98,11 +102,13 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         assert.notInclude(remaining, startupPhone.sessionId);
         assert.include(remaining, startupBrowser.sessionId);
         assert.include(remaining, bot.sessionId);
-        assert.lengthOf(yield* pairingLinks.listActive(), 0);
+        const links = (yield* pairingLinks.listActive()).map((link) => link.id);
+        assert.notInclude(links, deviceLink.id);
+        assert.deepEqual(links, [approval.id]);
       }).pipe(Effect.provide(layerEnvironmentAuth())),
     );
 
-    it.effect("revokes only T3 Connect clients when the policy keeps remote clients", () =>
+    it.effect("revokes link-paired and T3 Connect clients even when a policy allows remote", () =>
       Effect.gen(function* () {
         const sessions = yield* SessionStore.SessionStore;
         const phone = yield* sessions.issue({ subject: "one-time-token" });
@@ -114,7 +120,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
               ManagedPolicy.layerTest({
                 schemaVersion: 1,
                 organization: "Example Corp",
-                limits: { connect: false },
+                limits: { clients: ["remote"] },
               }),
               layerServerConfig(),
             ),
@@ -122,16 +128,33 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         );
 
         const remaining = (yield* sessions.listActive()).map((session) => session.sessionId);
-        assert.include(remaining, phone.sessionId);
+        assert.notInclude(remaining, phone.sessionId);
         assert.notInclude(remaining, connect.sessionId);
       }).pipe(Effect.provide(layerEnvironmentAuth())),
     );
 
-    it.effect("creates, lists, and revokes client pairing links", () =>
+    it.effect("refuses device pairing links without a policy file", () =>
       Effect.gen(function* () {
         const environmentAuth = yield* EnvironmentAuth.EnvironmentAuth;
 
-        const created = yield* environmentAuth.createPairingLink({
+        const error = yield* environmentAuth
+          .createPairingLink({ subject: "one-time-token" })
+          .pipe(Effect.flip);
+
+        assert.equal(error._tag, "ManagedPolicyRefusedError");
+        assert.equal(
+          error.message,
+          "Fhara's policy does not allow remote clients, so this server cannot create pairing links.",
+        );
+      }).pipe(Effect.provide(layerEnvironmentAuth())),
+    );
+
+    it.effect("lists and revokes pairing links left from before pairing was disabled", () =>
+      Effect.gen(function* () {
+        const environmentAuth = yield* EnvironmentAuth.EnvironmentAuth;
+        const pairingLinks = yield* PairingGrantStore.PairingGrantStore;
+
+        const created = yield* pairingLinks.issueOneTimeToken({
           scopes: ["orchestration:read"],
           subject: "one-time-token",
           label: "CI phone",
@@ -142,7 +165,6 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))(
         const revoked = yield* environmentAuth.revokePairingLink(created.id);
         const listedAfterRevoke = yield* environmentAuth.listPairingLinks();
 
-        expect(created.scopes).toEqual(["orchestration:read"]);
         expect(created.credential.length).toBeGreaterThan(0);
         expect(listedBeforeRevoke).toHaveLength(1);
         expect(listedBeforeRevoke[0]?.id).toBe(created.id);

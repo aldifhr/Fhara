@@ -72,35 +72,35 @@ const postJson = (path: string, body: unknown, headers?: Readonly<Record<string,
     body: encodeJson(body),
   });
 
-it.effect("sets the selected browser session cookies through the HTTP route", () =>
+const makeRequestContext = Effect.gen(function* () {
+  const random = yield* SecureRandom.SecureRandom;
+  const unusedSecretStore = ServerSecretStore.ServerSecretStore.of({
+    get: () => Effect.succeedNone,
+    set: () => Effect.void,
+    create: () => Effect.void,
+    getOrCreateRandom: () => Effect.die("Not used by these routes."),
+    remove: () => Effect.void,
+  });
+  return Context.make(SecureRandom.SecureRandom, random).pipe(
+    Context.add(ServerSecretStore.ServerSecretStore, unusedSecretStore),
+  );
+});
+
+it.effect("refuses app sign-in and reports the local owner's session", () =>
   Effect.gen(function* () {
-    const random = yield* SecureRandom.SecureRandom;
-    const unusedSecretStore = ServerSecretStore.ServerSecretStore.of({
-      get: () => Effect.succeedNone,
-      set: () => Effect.void,
-      create: () => Effect.void,
-      getOrCreateRandom: () => Effect.die("Not used by these routes."),
-      remove: () => Effect.void,
-    });
-    const requestContext = Context.make(SecureRandom.SecureRandom, random).pipe(
-      Context.add(ServerSecretStore.ServerSecretStore, unusedSecretStore),
-    );
+    const requestContext = yield* makeRequestContext;
     return yield* Effect.acquireUseRelease(
-      Effect.sync(
-        () =>
-          [
-            HttpRouter.toWebHandler(layerRoutes, { disableLogger: true }),
-            HttpRouter.toWebHandler(layerRoutes, { disableLogger: true }),
-          ] as const,
-      ),
-      ([environmentA, environmentB]) =>
+      Effect.sync(() => HttpRouter.toWebHandler(layerRoutes, { disableLogger: true })),
+      (environment) =>
         Effect.promise(async () => {
-          const devResponse = await environmentA.handler(
+          const browserSession = await environment.handler(
             postJson("/api/auth/browser-session", { credential: DEV_TOKEN }),
             requestContext,
           );
-          expect(devResponse.status).toBe(200);
-          const retiredScopeResponse = await environmentA.handler(
+          expect(browserSession.status).toBe(401);
+          expect(browserSession.headers.getSetCookie()).toEqual([]);
+
+          const token = await environment.handler(
             new Request("http://127.0.0.1/oauth/token", {
               method: "POST",
               body: new URLSearchParams({
@@ -108,86 +108,62 @@ it.effect("sets the selected browser session cookies through the HTTP route", ()
                 subject_token: DEV_TOKEN,
                 subject_token_type: AuthEnvironmentBootstrapTokenType,
                 requested_token_type: AuthAccessTokenType,
-                scope: "review:write",
               }),
             }),
             requestContext,
           );
-          expect(retiredScopeResponse.status).toBe(400);
-          expect(await retiredScopeResponse.json()).toMatchObject({ reason: "invalid_scope" });
+          expect(token.status).toBe(401);
 
-          const devCookies = devResponse.headers.getSetCookie();
-          const devCookie = devCookies.find((cookie) => cookie.startsWith("t3_dev_session_"));
-          expect(devCookie).toContain("HttpOnly");
-          expect(devCookie).toContain(`=${DEV_TOKEN};`);
-          expect(devCookies).toContainEqual(
-            expect.stringMatching(/^t3_session_[^=]*=;.*Max-Age=0/),
-          );
-          const devCookieHeader = devCookie?.split(";", 1)[0] ?? "";
-          const environmentBSession = await environmentB.handler(
-            new Request("http://127.0.0.1/api/auth/session", {
-              headers: { cookie: devCookieHeader },
-            }),
+          const session = await environment.handler(
+            new Request("http://127.0.0.1/api/auth/session"),
             requestContext,
           );
-          expect(environmentBSession.status).toBe(200);
-          expect(await environmentBSession.json()).toMatchObject({ authenticated: true });
+          expect(session.status).toBe(200);
+          expect(await session.json()).toMatchObject({
+            authenticated: true,
+            sessionMethod: "browser-session-cookie",
+          });
 
-          const pairingResponse = await environmentA.handler(
-            postJson(
-              "/api/auth/pairing-token",
-              { scopes: ["orchestration:read"] },
-              { cookie: devCookieHeader },
-            ),
+          const devicePairing = await environment.handler(
+            postJson("/api/auth/pairing-token", { scopes: ["orchestration:read"] }),
             requestContext,
           );
-          expect(pairingResponse.status).toBe(200);
-          const pairing = (await pairingResponse.json()) as { credential: string };
-          const restrictedResponse = await environmentA.handler(
-            postJson("/api/auth/browser-session", { credential: pairing.credential }),
-            requestContext,
-          );
-          expect(restrictedResponse.status).toBe(200);
-          const restrictedCookies = restrictedResponse.headers.getSetCookie();
-          expect(restrictedCookies).toHaveLength(1);
-          expect(restrictedCookies[0]).toMatch(/^t3_session_/);
-          expect(restrictedCookies[0]).not.toContain("t3_dev_session_");
-        }),
-      ([environmentA, environmentB]) =>
-        Effect.promise(() => Promise.all([environmentA.dispose(), environmentB.dispose()])),
-    );
-  }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
-);
+          expect(devicePairing.status).toBe(403);
 
-it.effect.each(["DPoP", "dpop"])("challenges a refused %s request with DPoP", (scheme) =>
-  Effect.gen(function* () {
-    const random = yield* SecureRandom.SecureRandom;
-    const unusedSecretStore = ServerSecretStore.ServerSecretStore.of({
-      get: () => Effect.succeedNone,
-      set: () => Effect.void,
-      create: () => Effect.void,
-      getOrCreateRandom: () => Effect.die("Not used by these routes."),
-      remove: () => Effect.void,
-    });
-    const requestContext = Context.make(SecureRandom.SecureRandom, random).pipe(
-      Context.add(ServerSecretStore.ServerSecretStore, unusedSecretStore),
-    );
-    return yield* Effect.acquireUseRelease(
-      Effect.sync(() => HttpRouter.toWebHandler(layerRoutes, { disableLogger: true })),
-      (environment) =>
-        Effect.promise(async () => {
-          const refused = await environment.handler(
-            postJson(
-              "/api/auth/pairing-token",
-              { scopes: ["orchestration:read"] },
-              { authorization: `${scheme} not-a-valid-token` },
-            ),
+          const approvalCode = await environment.handler(
+            postJson("/api/auth/pairing-token", { access: "read-only" }),
             requestContext,
           );
-          expect(refused.status).toBe(401);
-          expect(refused.headers.get("www-authenticate")).toBe("DPoP");
+          expect(approvalCode.status).toBe(200);
+          expect(await approvalCode.json()).toMatchObject({ access: "read-only" });
         }),
       (environment) => Effect.promise(() => environment.dispose()),
     );
   }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
+);
+
+it.effect.each(["Bearer", "DPoP"])(
+  "serves a request with a stale %s header as the owner",
+  (scheme) =>
+    Effect.gen(function* () {
+      const requestContext = yield* makeRequestContext;
+      return yield* Effect.acquireUseRelease(
+        Effect.sync(() => HttpRouter.toWebHandler(layerRoutes, { disableLogger: true })),
+        (environment) =>
+          Effect.promise(async () => {
+            const response = await environment.handler(
+              new Request("http://127.0.0.1/api/auth/websocket-ticket", {
+                method: "POST",
+                headers: { authorization: `${scheme} not-a-valid-token` },
+              }),
+              requestContext,
+            );
+            expect(response.status).toBe(200);
+            expect(await response.json()).toMatchObject({
+              ticket: EnvironmentAuth.LOCAL_OWNER_WS_TICKET,
+            });
+          }),
+        (environment) => Effect.promise(() => environment.dispose()),
+      );
+    }).pipe(Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );

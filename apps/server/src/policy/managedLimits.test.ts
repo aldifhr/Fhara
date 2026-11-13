@@ -33,7 +33,7 @@ it.effect("refuses to listen on a non-loopback host when remote clients are not 
     }).pipe(Effect.flip);
     assert.equal(
       error.message,
-      "Example Corp's policy does not allow remote clients, so the server cannot listen on 0.0.0.0.",
+      "Fhara's policy does not allow remote clients, so the server cannot listen on 0.0.0.0.",
     );
   }),
 );
@@ -69,7 +69,8 @@ it.effect("binds only the loopback address it approved when remote clients are n
       privateNetworkOnly: true,
     }).pipe(Effect.flip);
     assert.include(service.message, "set T3CODE_HOST=127.0.0.1 in its service.env");
-    assert.equal(yield* bind("localhost", { document: undefined }), "localhost");
+    // Without a policy file the bind is still the loopback literal, never a name.
+    assert.equal(yield* bind("localhost", { document: undefined }), "127.0.0.1");
     assert.equal(yield* bind(undefined, { document: undefined }), "127.0.0.1");
   }),
 );
@@ -108,11 +109,26 @@ it.effect("refuses unsafe-no-auth under any policy file, even one without limits
   }),
 );
 
-it.effect("allows the clients the policy lists", () =>
-  ManagedLimits.checkServerReachability(policy({ clients: ["remote"] }), {
-    authPolicy: "remote-reachable",
-    host: "0.0.0.0",
-    tailscaleServeEnabled: true,
+it.effect("refuses remote clients and Tailscale Serve even when a policy lists remote", () =>
+  Effect.gen(function* () {
+    const remote = policy({ clients: ["remote"] });
+    assert.isFalse(ManagedLimits.allowsRemoteClients(remote));
+    assert.isFalse(ManagedLimits.allowsRemoteClients({ document: undefined }));
+    const listen = yield* ManagedLimits.checkServerReachability(remote, {
+      authPolicy: "remote-reachable",
+      host: "0.0.0.0",
+      tailscaleServeEnabled: false,
+    }).pipe(Effect.flip);
+    assert.equal(
+      listen.message,
+      "Fhara's policy does not allow remote clients, so the server cannot listen on 0.0.0.0.",
+    );
+    const serve = yield* ManagedLimits.checkServerReachability(remote, {
+      authPolicy: "remote-reachable",
+      host: "127.0.0.1",
+      tailscaleServeEnabled: true,
+    }).pipe(Effect.flip);
+    assert.include(serve.message, "Tailscale Serve cannot be turned on");
   }),
 );
 
@@ -125,7 +141,8 @@ it.effect("tells clients Connect is off when the policy leaves out remote client
       clients: ["desktop", "local-browser"],
       connect: false,
     });
-    assert.isTrue(ManagedLimits.allowsConnect(policy({ clients: ["remote"] })));
+    assert.isFalse(ManagedLimits.allowsConnect(policy({ clients: ["remote"] })));
+    assert.isFalse(ManagedLimits.allowsConnect({ document: undefined }));
     assert.isFalse(ManagedLimits.allowsConnect(policy({ connect: false })));
   }),
 );

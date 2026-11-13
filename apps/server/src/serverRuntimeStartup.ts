@@ -49,7 +49,6 @@ import { forkParked, forkParkedFiber } from "./serverActivation.ts";
 import * as AnalyticsService from "./telemetry/AnalyticsService.ts";
 import { getServerOwners } from "./telemetry/Identify.ts";
 import * as ServerEnvironment from "./environment/ServerEnvironment.ts";
-import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
 import { formatHeadlessServeOutput, issueHeadlessServeAccessInfo } from "./startupAccess.ts";
 
 export class ServerRuntimeStartupError extends Schema.TaggedError<ServerRuntimeStartupError>()(
@@ -328,27 +327,20 @@ const resolveAutoBootstrapWelcomeTargets = Effect.gen(function* () {
 
 const resolveStartupBrowserTarget = Effect.gen(function* () {
   const serverConfig = yield* ServerConfig.ServerConfig;
-  const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;
   const localUrl = `http://localhost:${serverConfig.port}`;
   const bindUrl =
     serverConfig.host && !isWildcardHost(serverConfig.host)
       ? `http://${formatHostForUrl(serverConfig.host)}:${serverConfig.port}`
       : localUrl;
-  const baseTarget = serverConfig.devUrl?.toString() ?? bindUrl;
-  return serverConfig.mode === "desktop"
-    ? baseTarget
-    : yield* serverAuth.issueStartupPairingUrl(baseTarget);
+  return serverConfig.devUrl?.toString() ?? bindUrl;
 });
 
-/** Prints the one-time admin pairing URL to stdout only; logger records reach trace files and collectors. */
-export const announceStartupPairingUrl = (pairingUrl: string) =>
-  Effect.logInfo("Authentication required. Open Fhara using the pairing URL.").pipe(
-    Effect.andThen(Console.log(`  pairingUrl: ${pairingUrl}`)),
-  );
+/** App sign-in is off, so startup prints the plain local URL; it carries no token. */
+export const announceStartupUrl = (url: string) =>
+  Effect.logInfo("Fhara is ready.").pipe(Effect.andThen(Console.log(`  url: ${url}`)));
 
-// Pairing tokens belong only in announceStartupPairingUrl's stdout output.
 export const logBrowserAutoOpenUnavailable = Effect.logInfo("browser auto-open unavailable", {
-  hint: "Open the pairing URL above in your browser.",
+  hint: "Open the URL above in your browser.",
 });
 
 export const maybeOpenBrowser = Effect.fn("serverRuntimeStartup.maybeOpenBrowser")(function* (
@@ -361,8 +353,7 @@ export const maybeOpenBrowser = Effect.fn("serverRuntimeStartup.maybeOpenBrowser
   const externalLauncher = yield* ExternalLauncher.ExternalLauncher;
 
   yield* externalLauncher.launchBrowser(target).pipe(
-    // The target carries the pairing token, and a failed launch records its
-    // command line on the span, so this call stays out of traces.
+    // A failed launch records its command line on the span; keep URLs out of traces.
     Effect.withTracerEnabled(false),
     Effect.catch(() => logBrowserAutoOpenUnavailable),
   );
@@ -622,7 +613,7 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
           yield* Effect.logDebug("startup phase: browser open check");
           const startupBrowserTarget = yield* resolveStartupBrowserTarget;
           if (serverConfig.mode !== "desktop") {
-            yield* announceStartupPairingUrl(startupBrowserTarget);
+            yield* announceStartupUrl(startupBrowserTarget);
           }
           yield* runStartupPhase("browser.open", maybeOpenBrowser(startupBrowserTarget));
         }

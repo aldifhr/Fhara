@@ -158,6 +158,14 @@ export default mergeConfig(
       ],
       hookTimeout: 120_000,
       testTimeout: 120_000,
+      // Fhara P0b: app pairing, T3 Connect and linked environments are refused by policy, so
+      // these suites test unreachable paths. They go with the cloud/, peer/ and pair modules.
+      exclude: [
+        "src/cloud/CloudLink.test.ts",
+        "src/peer/PeerLinks.test.ts",
+        "src/peer/PeerLinkRequests.test.ts",
+        "src/cli/pair.test.ts",
+      ],
     },
   }),
 );

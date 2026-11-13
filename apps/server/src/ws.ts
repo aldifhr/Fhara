@@ -3638,6 +3638,10 @@ export const layer = Layer.unwrap(
               ),
             )
           : rpcWebSocketHttpEffect;
+        // The local owner has no stored session to mark connected or to revoke.
+        if (session.sessionId === EnvironmentAuth.LOCAL_OWNER_SESSION.sessionId) {
+          return yield* framedRpcWebSocketHttpEffect;
+        }
         return yield* Effect.acquireUseRelease(
           sessions.markConnected(session.sessionId),
           () =>

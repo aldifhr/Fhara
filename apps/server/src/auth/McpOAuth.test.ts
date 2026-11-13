@@ -3,16 +3,15 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   AuthMcpClientAccess,
   AuthStandardClientScopes,
-  type AuthCreatePairingCredentialInput,
   type EnvironmentCloudLinkStateResult,
   EnvironmentHttpApi,
   MCP_PEER_LINK_SOFTWARE_ID,
   mcpClientScopes,
 } from "@t3tools/contracts";
 import { expect, it } from "@effect/vitest";
-import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Etag from "effect/http/Etag";
@@ -25,11 +24,11 @@ import * as Schema from "effect/Schema";
 
 import * as CloudLink from "../cloud/CloudLink.ts";
 import * as ServerConfig from "../config.ts";
-import { makeDpopKey } from "./dpop.testkit.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as Sqlite from "../persistence/Sqlite.ts";
 import * as EnvironmentAuth from "./EnvironmentAuth.ts";
+import * as PairingGrantStore from "./PairingGrantStore.ts";
 import * as McpOAuth from "./McpOAuth.ts";
 import * as McpOAuthHttp from "./mcpOAuthHttp.ts";
 import * as ServerSecretStore from "./ServerSecretStore.ts";
@@ -61,7 +60,9 @@ const makeLayerRoutes = (
 ) =>
   Layer.mergeAll(
     Layer.effectDiscard(
-      EnvironmentAuth.EnvironmentAuth.pipe(Effect.tap((auth) => Effect.sync(() => capture(auth)))),
+      Effect.all([EnvironmentAuth.EnvironmentAuth, PairingGrantStore.PairingGrantStore]).pipe(
+        Effect.tap(([auth, store]) => Effect.sync(() => capture(withPlainCodes(auth, store)))),
+      ),
     ),
     HttpApiBuilder.layer(AuthTestApi).pipe(
       Layer.provide(AuthHttp.layer),
@@ -87,6 +88,36 @@ const makeLayerRoutes = (
     ),
     Layer.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
   );
+
+/**
+ * App pairing no longer mints plain codes, but the approval page still accepts one left from
+ * before; these tests mint them straight from the store. Approval codes go through the service.
+ */
+function withPlainCodes(
+  auth: EnvironmentAuth.EnvironmentAuth["Service"],
+  store: PairingGrantStore.PairingGrantStore["Service"],
+): EnvironmentAuth.EnvironmentAuth["Service"] {
+  return {
+    ...auth,
+    issuePairingCredential: (input) =>
+      input?.access !== undefined
+        ? auth.issuePairingCredential(input)
+        : store
+            .issueOneTimeToken({
+              scopes: input?.scopes ?? AuthStandardClientScopes,
+              subject: "one-time-token",
+              ...(input?.label ? { label: input.label } : {}),
+            })
+            .pipe(
+              Effect.map((issued) => ({
+                id: issued.id,
+                credential: issued.credential,
+                expiresAt: DateTime.toUtc(issued.expiresAt),
+              })),
+              Effect.orDie,
+            ),
+  };
+}
 
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 const ORIGIN = "https://box.example.ts.net";
@@ -259,10 +290,12 @@ it.effect("registers loopback and https clients and never redirects for an unver
       const details = yield* handler(
         postJson("/oauth/mcp/approval", authorizeParams(clientId)),
       ).pipe(Effect.flatMap(json<Record<string, unknown>>));
-      expect(details).toEqual({
+      // The local owner is always signed in, so the page also offers one-click approval.
+      expect(details).toMatchObject({
         clientName: "Claude Code",
         redirectHost: "localhost:51234",
         environmentHost: "box.example.ts.net",
+        csrfToken: expect.any(String),
       });
 
       const forgedDetails = yield* handler(
@@ -460,23 +493,6 @@ it.live(
         const approveWith = (code: string) =>
           decide(handler, params, { _tag: "pairing-code", access: "auto", code });
 
-        const bound = yield* auth.createPairingLink({
-          proofKeyThumbprint: "device-key-thumbprint",
-        });
-        expect((yield* approveWith(bound.credential)).status).toBe(400);
-        const stillValid = yield* auth
-          .exchangeBootstrapCredentialForAccessToken(
-            bound.credential,
-            undefined,
-            { deviceType: "mobile" },
-            { proofKeyThumbprint: "device-key-thumbprint" },
-          )
-          .pipe(
-            Effect.as(true),
-            Effect.orElseSucceed(() => false),
-          );
-        expect(stillValid).toBe(true);
-
         const readOnly = yield* auth.issuePairingCredential({ scopes: ["orchestration:read"] });
         const readOnlyResponse = yield* approveWith(readOnly.credential);
         expect(readOnlyResponse.status).toBe(400);
@@ -665,131 +681,35 @@ it.effect(
     }),
 );
 
-it.live("one-click approves only access the browser session holds the scopes for", () =>
-  withRoutes((handler, auth) =>
+it.live("one-click approves any access for the local owner, with its CSRF token", () =>
+  withRoutes((handler) =>
     Effect.gen(function* () {
       const clientId = yield* registeredClientId(handler);
       const params = authorizeParams(clientId);
-      const browserCookie = (scopes: NonNullable<AuthCreatePairingCredentialInput["scopes"]>) =>
-        Effect.gen(function* () {
-          const pairing = yield* auth.issuePairingCredential({ scopes });
-          const response = yield* handler(
-            at("/api/auth/browser-session", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: encodeJson({ credential: pairing.credential }),
-            }),
-          );
-          return response.headers.getSetCookie()[0]!.split(";", 1)[0]!;
-        });
-      const details = (cookie: string) =>
-        handler(postJson("/oauth/mcp/approval", params, cookie)).pipe(
-          Effect.flatMap(json<{ csrfToken?: string; oneClickAccess?: ReadonlyArray<string> }>),
-        );
-
-      const admin = yield* browserCookie([...AuthStandardClientScopes]);
-      const adminDetails = yield* details(admin);
-      expect(adminDetails.csrfToken).toEqual(expect.any(String));
-      expect(adminDetails.oneClickAccess).toEqual([
+      const details = yield* handler(postJson("/oauth/mcp/approval", params)).pipe(
+        Effect.flatMap(json<{ csrfToken?: string; oneClickAccess?: ReadonlyArray<string> }>),
+      );
+      expect(details.csrfToken).toEqual(expect.any(String));
+      expect(details.oneClickAccess).toEqual([
         "read-only",
         "approval-required",
         "auto-accept-edits",
         "auto",
         "full-access",
       ]);
-      const oneClick = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: adminDetails.csrfToken! },
-        admin,
-      );
+      const oneClick = yield* decide(handler, params, {
+        _tag: "browser-session",
+        access: "auto",
+        csrfToken: details.csrfToken!,
+      });
       expect(new URL(oneClick.redirectTo!).searchParams.get("code")).toEqual(expect.any(String));
 
-      const accessOnly = yield* browserCookie(["access:read", "access:write"]);
-      expect((yield* details(accessOnly)).csrfToken).toBeUndefined();
-      const forged = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: "forged" },
-        accessOnly,
-      );
-      expect(forged.status).toBe(400);
-      expect(forged.message).toContain("Enter a pairing code instead");
-
-      const reader = yield* browserCookie(["access:write", "orchestration:read"]);
-      const readerDetails = yield* details(reader);
-      expect(readerDetails.csrfToken).toEqual(expect.any(String));
-      expect(readerDetails.oneClickAccess).toEqual(["read-only"]);
-      const tooBroad = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: readerDetails.csrfToken! },
-        reader,
-      );
-      expect(tooBroad.status).toBe(400);
-      const readOnly = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "read-only", csrfToken: readerDetails.csrfToken! },
-        reader,
-      );
-      expect(new URL(readOnly.redirectTo!).searchParams.get("code")).toEqual(expect.any(String));
-
-      // The hosted app approves with the owner's T3 Connect session, which sends no cookie.
-      const connect = `Bearer ${(yield* auth.issueSession({ scopes: [...AuthStandardClientScopes] })).token}`;
-      const connectDetails = yield* details(connect);
-      expect(connectDetails.oneClickAccess).toContain("full-access");
-      const viaConnect = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: connectDetails.csrfToken! },
-        connect,
-      );
-      expect(new URL(viaConnect.redirectTo!).searchParams.get("code")).toEqual(expect.any(String));
-
-      // The hosted app may load and decide with two credentials minted for the same browser key.
-      const key = makeDpopKey();
-      const dpopSession = (thumbprint: string) =>
-        auth.issuePairingCredential({ scopes: [...AuthStandardClientScopes] }).pipe(
-          Effect.flatMap((pairing) =>
-            auth.exchangeBootstrapCredentialForAccessToken(
-              pairing.credential,
-              undefined,
-              { deviceType: "desktop" },
-              { proofKeyThumbprint: thumbprint },
-            ),
-          ),
-          Effect.map((exchanged) => exchanged.access_token),
-        );
-      const iat = Math.floor((yield* Clock.currentTimeMillis) / 1_000);
-      const dpopHeaders = (signer: typeof key, token: string, path: string) => ({
-        authorization: `DPoP ${token}`,
-        dpop: signer.sign({ method: "POST", url: `${ORIGIN}${path}`, token, iat }),
+      const forged = yield* decide(handler, params, {
+        _tag: "browser-session",
+        access: "auto",
+        csrfToken: "forged",
       });
-      const loadedWith = yield* dpopSession(key.thumbprint);
-      const loaded = yield* handler(
-        postJson(
-          "/oauth/mcp/approval",
-          params,
-          dpopHeaders(key, loadedWith, "/oauth/mcp/approval"),
-        ),
-      ).pipe(Effect.flatMap(json<{ csrfToken?: string }>));
-      const renewed = yield* dpopSession(key.thumbprint);
-      const sameKey = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: loaded.csrfToken! },
-        dpopHeaders(key, renewed, "/oauth/mcp/decision"),
-      );
-      expect(new URL(sameKey.redirectTo!).searchParams.get("code")).toEqual(expect.any(String));
-      const otherKey = makeDpopKey();
-      const elsewhere = yield* decide(
-        handler,
-        params,
-        { _tag: "browser-session", access: "auto", csrfToken: loaded.csrfToken! },
-        dpopHeaders(otherKey, yield* dpopSession(otherKey.thumbprint), "/oauth/mcp/decision"),
-      );
-      expect(elsewhere.status).toBe(400);
+      expect(forged.status).toBe(400);
     }),
   ),
 );

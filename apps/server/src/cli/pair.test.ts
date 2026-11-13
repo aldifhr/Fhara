@@ -393,7 +393,7 @@ describe("t3 pair", () => {
 
         assert.include(
           String(error),
-          "Example Corp's policy does not allow remote clients, so Tailscale Serve cannot be turned on.",
+          "Fhara's policy does not allow remote clients, so Tailscale Serve cannot be turned on.",
         );
       }),
     ).pipe(Effect.provide(NodeServices.layer)),
