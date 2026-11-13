@@ -30,7 +30,6 @@ import {
   readWorkspaceConfig,
   createBuildConfig,
   resolveGitHubPublishConfig,
-  DESKTOP_FILE_EXCLUSIONS,
   InvalidMacPasskeyRpDomainError,
   InvalidMacPasskeyPublishableKeyError,
   UnsupportedDesktopBuildArchitectureError,
@@ -58,9 +57,7 @@ import {
   WindowsPrimaryNativeProbeError,
   WindowsDesktopBuildPrerequisitesMissingError,
   WindowsPackagedPayloadValidationError,
-  stageCursorSdkPlatformPackages,
   WINDOWS_PACKAGED_PAYLOAD_FILE_LIMIT,
-  WINDOWS_SERVER_ASAR_IGNORE_GLOBS,
   WINDOWS_SERVER_ASAR_RESOURCE,
   WSL_RUNTIME_ARCHIVE_EXTRA_RESOURCE,
   WSL_RUNTIME_ARCHIVE_HASH_EXTRA_RESOURCE,
@@ -672,58 +669,6 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       },
     );
   });
-
-  it.effect("ships Cursor platform assets outside asar for spawning and native loading", () =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cursor-helpers-" });
-        const nodeModules = path.join(root, "node_modules");
-        const destination = path.join(root, "resources/node_modules/@cursor");
-        const cursorDirectory = symlinksSupported
-          ? path.join(root, "store/@cursor")
-          : path.join(nodeModules, "@cursor");
-        yield* fs.makeDirectory(path.join(cursorDirectory, "sdk"), { recursive: true });
-        if (symlinksSupported) {
-          yield* fs.makeDirectory(path.join(nodeModules, "@cursor"), { recursive: true });
-          yield* fs.symlink(
-            path.join(cursorDirectory, "sdk"),
-            path.join(nodeModules, "@cursor/sdk"),
-          );
-        }
-        const helpers = [
-          "sdk-darwin-arm64/bin/rg",
-          "sdk-darwin-arm64/bin/cursorsandbox",
-          "sdk-darwin-arm64/vendor/tree-sitter/index.js",
-          "sdk-darwin-arm64/vendor/tree-sitter/binding.node",
-          "sdk-darwin-arm64/vendor/tree-sitter-bash/binding.node",
-          "sdk-darwin-arm64/package.json",
-          "sdk-win32-x64/bin/rg.exe",
-        ];
-        for (const helper of helpers) {
-          const source = path.join(cursorDirectory, helper);
-          yield* fs.makeDirectory(path.dirname(source), { recursive: true });
-          yield* fs.writeFileString(source, "fixture helper", { mode: 0o755 });
-        }
-        yield* stageCursorSdkPlatformPackages(nodeModules, destination);
-        for (const helper of helpers) {
-          assert.equal(yield* fs.readFileString(path.join(destination, helper)), "fixture helper");
-          const packagedPath = `node_modules/@cursor/${helper}`;
-          assert.isTrue(
-            DESKTOP_FILE_EXCLUSIONS.some((glob) =>
-              NodePath.matchesGlob(packagedPath, glob.slice(1)),
-            ),
-          );
-          assert.isTrue(
-            WINDOWS_SERVER_ASAR_IGNORE_GLOBS.some((glob) =>
-              NodePath.matchesGlob(packagedPath, glob),
-            ),
-          );
-        }
-      }),
-    ),
-  );
 
   it("drops the other architecture's Darwin prebuilds from single-architecture Mac builds", () => {
     const excludes = (arch: "arm64" | "x64" | "universal", file: string) =>

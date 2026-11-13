@@ -1559,9 +1559,6 @@ importers:
 
   scripts:
     dependencies:
-      '@e2e-dev/mobile':
-        specifier: 0.12.6
-        version: 0.12.6(e2e@0.23.0)
       '@e2e-dev/web':
         specifier: 0.15.5
         version: 0.15.5(e2e@0.23.0)
@@ -1580,9 +1577,6 @@ importers:
       '@t3tools/tailscale':
         specifier: workspace:*
         version: link:../packages/tailscale
-      agent-device:
-        specifier: 0.21.36
-        version: 0.21.36
       e2e:
         specifier: 0.23.0
         version: 0.23.0
@@ -2460,16 +2454,6 @@ packages:
     resolution: {integrity: sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg==}
     peerDependencies:
       react: '>=16.8.0'
-
-  '@e2e-dev/mobile@0.12.6':
-    resolution: {integrity: sha512-V56hOt5cJsoC9M8kMIjsCKOY2pEPHb4awYMLP699yMO4aNUUnpALYK/R2ik6C64CLEq4N1aibLmD7ErPZVc97w==}
-    engines: {node: ^22.22.3 || >=24.8.0}
-    peerDependencies:
-      ai: ^7.0.0
-      e2e: '>=0.22.1 <1'
-    peerDependenciesMeta:
-      ai:
-        optional: true
 
   '@e2e-dev/web@0.15.5':
     resolution: {integrity: sha512-fUXrSgfii6w/q7OyX9/kEIDLpIMHpEkTH81hrR8WLnqk8li3bRyXJQBGWqtq9NoWpS2UANnhMI45n6Fv1ErCnw==}
@@ -5945,16 +5929,6 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
-
-  agent-device@0.21.36:
-    resolution: {integrity: sha512-aG88WlEHjFc/OEBQC7AJg+2LfNoVT/ogxnnzIUYUEgafdiTvBaA+X6uQ2wNmpp2ZrHLy8QIXoEOyc3NEZgJCpQ==}
-    engines: {node: '>=22.12'}
-    hasBin: true
-    peerDependencies:
-      ai: ^6.0.0 || ^7.0.0
-    peerDependenciesMeta:
-      ai:
-        optional: true
 
   agent-install@0.0.5:
     resolution: {integrity: sha512-nHlms9BkP8ZiY79HrwCGiA2DcNaXrAaJrCM/BEqQ7MEsSKyCk+2A76xPGylIfASZSZE0SaU3T0bNSg4rBPIJAQ==}
@@ -10586,13 +10560,6 @@ snapshots:
       react: 19.3.0
       tslib: 2.8.1
 
-  '@e2e-dev/mobile@0.12.6(e2e@0.23.0)':
-    dependencies:
-      agent-device: 0.21.36
-      e2e: 0.23.0
-      pngjs: 7.0.0
-      zod: 4.6.7
-
   '@e2e-dev/web@0.15.5(e2e@0.23.0)':
     dependencies:
       e2e: 0.23.0
@@ -13439,8 +13406,6 @@ snapshots:
   acorn@8.16.0: {}
 
   agent-base@7.1.4: {}
-
-  agent-device@0.21.36: {}
 
   agent-install@0.0.5:
     dependencies:
