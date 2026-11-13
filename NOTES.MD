@@ -1,3 +1,12 @@
 - [x] Hapus tombol X (close) di toast — selesai
 - [x] Hapus fitur side chat — selesai
 - [x] Tambah fitur queue (default saat kirim pesan ketika turn berjalan) — selesai
+- [ ] Plugin marketplace like ZCODE
+- [ ] Use SF Pro in regular and medium with -0.15px letter spacing
+- [ ] Keep type to 12px, 13px, 14px, and 24px
+- [ ] Build hierarchy with #292929, #5D5D5D, and #9E9E9E
+- [ ] Size icons at 14px for navigation and 20px for cards
+- [ ] Use 8px navigation, 16px cards, and rounded pill CTA radii
+- [ ] Figma MCP for designer role
+- [ ] add more skills for other role
+- [ ] 

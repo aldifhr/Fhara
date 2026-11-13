@@ -312,6 +312,7 @@ export function applyOrchestrationV2ProjectionEvent(
     case "thread.pull-request-synced":
     case "thread.runtime-mode-updated":
     case "thread.interaction-mode-updated":
+    case "thread.agent-role-updated":
     case "thread.model-selection-updated":
     case "thread.provider-switched":
     case "thread.guest-share-updated":

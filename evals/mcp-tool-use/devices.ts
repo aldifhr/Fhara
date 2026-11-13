@@ -824,7 +824,8 @@ export const makeDeviceTools = Effect.fn("evaluateMcpToolUse.makeDeviceTools")(f
     failure?: DeviceError,
   ) {
     const entry = tools.find((tool) => tool.tool.name === name);
-    if (entry === undefined) return yield* Effect.die(new Error(`Fhara has no device tool ${name}.`));
+    if (entry === undefined)
+      return yield* Effect.die(new Error(`Fhara has no device tool ${name}.`));
     const result = yield* entry.handle(input).pipe(
       Effect.provideService(McpInvocationContext.McpInvocationContext, scope),
       Effect.provideService(McpSchema.McpRequestContext, request),

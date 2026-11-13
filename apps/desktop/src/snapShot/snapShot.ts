@@ -355,7 +355,6 @@ export async function accessibleWindowElementTree(
   let truncated = false;
   let root: MutableAccessibilityNode | undefined;
   const shouldContinue = options.shouldContinue ?? (() => true);
-  let rootBounds = sourceBounds;
 
   const descendantLocationsReliable = () => options.locationsReliable !== false;
 
@@ -372,7 +371,6 @@ export async function accessibleWindowElementTree(
       return undefined;
     }
     const elementBounds = safeProperty(() => current.bounds);
-    if (required && elementBounds) rootBounds = elementBounds;
     const node = accessibilityNode(
       current,
       elementBounds,
@@ -542,5 +540,3 @@ export function toElectronAccelerator(shortcut: SnapShotKeyChord): string {
   parts.push(ELECTRON_KEY_NAMES[shortcut.key] ?? shortcut.key.toUpperCase());
   return parts.join("+");
 }
-
-

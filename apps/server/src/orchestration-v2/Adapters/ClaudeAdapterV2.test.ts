@@ -268,6 +268,33 @@ function makeClaudeTestTurnInput(input: {
 }
 
 describe("ClaudeAdapterV2 runtime query policy", () => {
+  it("appends the room's agent role instructions to the system prompt", () => {
+    const withRole = ClaudeAdapterV2.makeClaudeQueryOptions({
+      modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+      nativeThreadId: "agent-role-thread",
+      resume: false,
+      cwd: "/workspace",
+      agentRoleText: "Act as the CTO.",
+    });
+    const withoutRole = ClaudeAdapterV2.makeClaudeQueryOptions({
+      modelSelection: CLAUDE_TEST_MODEL_SELECTION,
+      nativeThreadId: "agent-role-thread",
+      resume: false,
+      cwd: "/workspace",
+    });
+    const systemPromptText = (options: ClaudeAdapterV2.ClaudeAgentSdkQueryOptions): string => {
+      const prompt = options.systemPrompt as
+        | string
+        | { append?: string | ReadonlyArray<string> }
+        | undefined;
+      if (typeof prompt === "string") return prompt;
+      const append = prompt?.append;
+      return typeof append === "string" ? append : (append ?? []).join("\n\n");
+    };
+    assert.include(systemPromptText(withRole), "Act as the CTO.");
+    assert.notInclude(systemPromptText(withoutRole), "Act as the CTO.");
+  });
+
   it.each([
     "-- --thinking-display omitted",
     "--thinking-display summarized -- --thinking-display omitted",

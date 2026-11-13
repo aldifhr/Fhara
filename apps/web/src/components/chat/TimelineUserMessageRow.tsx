@@ -15,6 +15,8 @@ import {
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
 import { Link } from "@tanstack/react-router";
+import { useAtomValue } from "@effect/atom-react";
+import { environmentThreadDetails } from "../../state/threads";
 import { useQuietThreadShell } from "../../state/entities";
 import { useEnvironment } from "../../state/environments";
 import { useEnvironmentQuery } from "../../state/query";
@@ -45,6 +47,8 @@ import {
 } from "lucide-react";
 import { Button, InlineButton } from "../ui/button";
 import { FreshSessionRow, ModelSwitchRow } from "./V2LifecycleRow";
+import { completionDisplayText, delegatedRoleSender } from "./agentRoleMessages.logic";
+import { roleAvatarClass } from "./agentRoleTask.logic";
 import { useAssetUrlRefresh, useAssetUrls, useAssetUrlState } from "../../assets/assetUrls";
 import { AttachmentImage } from "../media/AttachmentImage";
 import { MediaVideoPlayer } from "../media/MediaVideoPlayer";
@@ -386,6 +390,8 @@ export function useScheduledTaskTitle(
 export function FoldedMessageHeader(props: {
   icon: LucideIcon;
   label: string;
+  /** A sender avatar, when the message speaks for someone specific. */
+  avatar?: ReactNode;
   summary: string;
   expanded: boolean;
   onToggle: () => void;
@@ -399,7 +405,7 @@ export function FoldedMessageHeader(props: {
       onClick={props.onToggle}
       className="flex w-full min-w-0 items-center gap-1.5 rounded-2xl px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-ring"
     >
-      <Icon className="size-4 shrink-0 stroke-2 text-muted-foreground" />
+      {props.avatar ?? <Icon className="size-4 shrink-0 stroke-2 text-muted-foreground" />}
       <span className="max-w-1/2 shrink-0 truncate text-muted-foreground">{props.label}</span>
       <span className="min-w-0 flex-1 truncate">{props.summary}</span>
       <ChevronDownIcon
@@ -470,8 +476,25 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
   const [expanded, setExpanded] = useState(false);
   const revealFoldRef = findRevealRef(() => setExpanded(true));
   const senderShell = useQuietThreadShell(folded ? senderRef : null);
+  // A delegated completion wake speaks as the role that ran the task.
+  // The wake message's own turn item carries the parent thread; subagents live on its projection.
+  const rowThreadId = row.projectedItem?.item.threadId ?? ctx.threadRef?.threadId;
+  const completionSender = useAtomValue(
+    environmentThreadDetails.threadAtom(
+      scopeThreadRef(
+        ctx.activeThreadEnvironmentId,
+        rowThreadId ?? (row.message.id as unknown as ThreadId),
+      ),
+    ),
+    (thread) =>
+      delegatedRoleSender({
+        taskIds: row.message.delegatedCompletion?.taskIds ?? [],
+        subagents: thread?.projection.subagents ?? [],
+      }),
+  );
   const senderLabel =
-    senderShell?.title.trim() || row.message.linkedSender?.title.trim() || "Agent";
+    completionSender?.summary.displayName ??
+    (senderShell?.title.trim() || row.message.linkedSender?.title.trim() || "Agent");
   // Only an environment this client is connected to can open the sender's thread there.
   const linkedSenderEnvironment = useEnvironment(row.message.linkedSender?.environmentId ?? null);
   const canOpenSender =
@@ -842,6 +865,66 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
       </div>
     </div>
   );
+  // A delegated role's completion reads as the role speaking in the room, like the
+  // mockup: a left-aligned bubble under a role avatar and name — not the user's voice.
+  if (completionSender !== null && !mediaOnly && !fileCardsOnly && !audioOnly) {
+    return (
+      <div className="group @container flex w-full flex-col items-start gap-1">
+        <MessageAuthorHeading>{completionSender.summary.displayName}</MessageAuthorHeading>
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className={`flex size-6 items-center justify-center rounded-full text-2xs font-semibold ${roleAvatarClass(completionSender.summary.id)}`}
+          >
+            {completionSender.summary.displayName.charAt(0)}
+          </span>
+          <span className="text-sm font-medium text-foreground">
+            {completionSender.summary.displayName}
+          </span>
+          <Tooltip>
+            <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
+              {formatDayAwareTimestamp(row.message.createdAt, ctx.timestampFormat)}
+            </TooltipTrigger>
+            <TooltipPopup>
+              {formatChatTimestampTooltip(row.message.createdAt, ctx.timestampFormat)}
+            </TooltipPopup>
+          </Tooltip>
+        </div>
+        <div className="min-w-0 max-w-[min(85%,42rem)] rounded-2xl rounded-tl-md border bg-card px-4 py-2.5">
+          <CollapsibleUserMessageBody
+            text={completionDisplayText(resolvedContext.text)}
+            renderContextReference={renderContextReference}
+            skills={ctx.skills}
+            markdownCwd={ctx.markdownCwd}
+            collapsible={false}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          {completionSender.childThreadId !== null ? (
+            <InlineButton
+              onClick={() =>
+                ctx.onOpenThread(
+                  ThreadId.make(completionSender!.childThreadId!),
+                  ctx.activeThreadEnvironmentId,
+                )
+              }
+              tone="muted"
+            >
+              Open task
+            </InlineButton>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
+              {formatDayAwareTimestamp(row.message.createdAt, ctx.timestampFormat)}
+            </TooltipTrigger>
+            <TooltipPopup>
+              {formatChatTimestampTooltip(row.message.createdAt, ctx.timestampFormat)}
+            </TooltipPopup>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className="group @container flex flex-col items-end gap-1"
@@ -903,6 +986,16 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
           <FoldedMessageHeader
             icon={MessagesSquareIcon}
             label={senderLabel}
+            avatar={
+              completionSender ? (
+                <span
+                  aria-hidden
+                  className={`flex size-4 items-center justify-center rounded-full text-3xs font-semibold ${roleAvatarClass(completionSender.summary.id)}`}
+                >
+                  {completionSender.summary.displayName.charAt(0)}
+                </span>
+              ) : undefined
+            }
             summary={foldSummary}
             expanded={expanded}
             onToggle={() => setExpanded((value) => !value)}
@@ -1028,7 +1121,11 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
             {fileCardsOnly || audioOnly ? null : (
               <div onCopyCapture={onBodyCopyCapture}>
                 <CollapsibleUserMessageBody
-                  text={resolvedContext.text}
+                  text={
+                    completionSender === null
+                      ? resolvedContext.text
+                      : completionDisplayText(resolvedContext.text)
+                  }
                   renderContextReference={renderContextReference}
                   skills={ctx.skills}
                   markdownCwd={ctx.markdownCwd}

@@ -412,12 +412,7 @@ const installWindowsEnvironment = Effect.fn("desktop.shellEnvironment.installWin
 const installPosixEnvironment = Effect.fn("desktop.shellEnvironment.installPosixEnvironment")(
   function* (
     config: ShellEnvironmentConfig,
-  ): Effect.fn.Return<
-    ShellDiscovery,
-    never,
-    ChildProcessSpawner.ChildProcessSpawner | FileSystem.FileSystem
-  > {
-    const fileSystem = yield* FileSystem.FileSystem;
+  ): Effect.fn.Return<ShellDiscovery, never, ChildProcessSpawner.ChildProcessSpawner> {
     const shellEnvironment: EnvironmentPatch = {};
     const userShells = [config.env.SHELL?.trim(), readUserLoginShell()];
 

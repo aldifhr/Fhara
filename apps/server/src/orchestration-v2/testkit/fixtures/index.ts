@@ -158,7 +158,18 @@ import { turnInterruptRestartInput } from "./turn_interrupt_restart/input.ts";
 import { assertClaudeWebSearchOutput } from "./web_search/claude_output.ts";
 import { assertWebSearchOutput } from "./web_search/codex_output.ts";
 import { webSearchInput } from "./web_search/input.ts";
-import { ACP_REGISTRY_MODEL_SELECTION, CLAUDE_MODEL_SELECTION, CODEX_MODEL_SELECTION, OPENCODE_MODEL_SELECTION, OPENCODE2_MODEL_SELECTION, READ_ONLY_NEVER_POLICY, READ_ONLY_ON_REQUEST_POLICY, RESTRICTED_GRANULAR_POLICY, type OrchestratorReplayFixture, WORKSPACE_NEVER_POLICY } from "./shared.ts";
+import {
+  ACP_REGISTRY_MODEL_SELECTION,
+  CLAUDE_MODEL_SELECTION,
+  CODEX_MODEL_SELECTION,
+  OPENCODE_MODEL_SELECTION,
+  OPENCODE2_MODEL_SELECTION,
+  READ_ONLY_NEVER_POLICY,
+  READ_ONLY_ON_REQUEST_POLICY,
+  RESTRICTED_GRANULAR_POLICY,
+  type OrchestratorReplayFixture,
+  WORKSPACE_NEVER_POLICY,
+} from "./shared.ts";
 
 export const ORCHESTRATOR_REPLAY_FIXTURES: ReadonlyArray<OrchestratorReplayFixture> = [
   {

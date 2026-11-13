@@ -1,3 +1,5 @@
+import * as Schema from "effect/Schema";
+
 /**
  * Display summary of the fixed agent roles (no prompts). The server registry in
  * `apps/server/src/roles/registry.ts` is the source; a server test keeps the two equal.
@@ -14,6 +16,9 @@ export const AGENT_ROLE_IDS = [
   "support",
 ] as const;
 export type AgentRoleId = (typeof AGENT_ROLE_IDS)[number];
+
+/** Wire schema for the fixed role ids. */
+export const AgentRoleIdSchema = Schema.Literals(AGENT_ROLE_IDS);
 
 export interface AgentRoleSummary {
   readonly id: AgentRoleId;
@@ -43,33 +48,21 @@ export const AGENT_ROLE_SUMMARIES: ReadonlyArray<AgentRoleSummary> = [
     displayName: "Frontend",
     description: "Builds UI screens and components in the web app and shared UI package.",
     readOnly: false,
-    writeScope: [
-      "apps/web/**",
-      "packages/ui/**"
-    ],
+    writeScope: ["apps/web/**", "packages/ui/**"],
   },
   {
     id: "backend",
     displayName: "Backend",
     description: "Builds server logic, APIs, contracts, persistence and shared packages.",
     readOnly: false,
-    writeScope: [
-      "apps/server/**",
-      "packages/**",
-      "!packages/ui/**"
-    ],
+    writeScope: ["apps/server/**", "packages/**", "!packages/ui/**"],
   },
   {
     id: "qa",
     displayName: "QA",
     description: "Writes and runs tests, reproduces bugs and reports quality issues.",
     readOnly: false,
-    writeScope: [
-      "**/*.test.*",
-      "**/*.spec.*",
-      "**/__tests__/**",
-      "e2e/**"
-    ],
+    writeScope: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**", "e2e/**"],
   },
   {
     id: "reviewer",
@@ -89,7 +82,7 @@ export const AGENT_ROLE_SUMMARIES: ReadonlyArray<AgentRoleSummary> = [
       "Dockerfile*",
       "*.config.*",
       "turbo.json",
-      "package.json"
+      "package.json",
     ],
   },
   {
@@ -104,9 +97,6 @@ export const AGENT_ROLE_SUMMARIES: ReadonlyArray<AgentRoleSummary> = [
     displayName: "Support",
     description: "Answers questions and maintains docs; the default when no other role fits.",
     readOnly: false,
-    writeScope: [
-      "**/*.md",
-      "docs/**"
-    ],
+    writeScope: ["**/*.md", "docs/**"],
   },
 ];

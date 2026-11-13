@@ -284,6 +284,8 @@ function Sidebar({
   collapsible = "offcanvas",
   resizable = false,
   className,
+  /** A leading column (like the app icon rail) docked inside the desktop panel. */
+  leading,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -291,6 +293,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
   resizable?: boolean | SidebarResizableOptions;
+  leading?: React.ReactNode;
 }) {
   const { isMobile, state, openMobile, setOpenMobile, setMobileSheetMounted } = useSidebar();
   // Not usePanelAnimationSettings: its navigation suppression would snap the sheet shut mid-exit when an item navigates.
@@ -397,6 +400,7 @@ function Sidebar({
         <div
           className={cn(
             "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
+            leading !== undefined && "flex-row",
             "[[data-panel-animations=true]_&]:transition-[left,right,width] [[data-panel-animations=true]_&]:[transition-duration:var(--panel-animation-duration)] [[data-panel-animations=true]_&]:ease-out",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
@@ -409,8 +413,12 @@ function Sidebar({
           data-slot="sidebar-container"
           {...props}
         >
+          {leading}
           <div
-            className="flex h-full w-full flex-col bg-sidebar surface-grain group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm/5"
+            className={cn(
+              "flex h-full min-w-0 flex-col bg-sidebar surface-grain group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm/5",
+              leading === undefined && "w-full",
+            )}
             data-sidebar="sidebar"
             data-slot="sidebar-inner"
           >

@@ -424,6 +424,7 @@ describe("Zen", () => {
       }),
     ),
   );
+});
 
 describe("listSourceProfiles Firefox fallback", () => {
   const cases = [

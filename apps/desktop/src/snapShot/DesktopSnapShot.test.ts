@@ -625,8 +625,7 @@ function concurrentCaptureFixture(platform: NodeJS.Platform, animations: boolean
         modKey: false,
       },
     },
-    trigger: () =>
-      (registerShortcutMock.mock.calls.at(-1)![1] as () => Promise<void>)(),
+    trigger: () => (registerShortcutMock.mock.calls.at(-1)![1] as () => Promise<void>)(),
     releaseAll: () => {
       for (const capture of captures) {
         capture.pixels.resolve();
@@ -935,7 +934,6 @@ it.effect("captures and reads Windows windows in physical pixels on a scaled dis
   );
 });
 
-
 it("covers straddling captures and intervening monitors without spanning unrelated displays", () => {
   const displays = [
     { bounds: { x: -1_920, y: 0, width: 1_920, height: 1_080 } },
@@ -1105,7 +1103,6 @@ it("does not let a failed transition fail landing or capture completion", async 
   }
 });
 
-
 it.each(["darwin", "win32"] as const)(
   "extracts the same structured accessibility tree on %s",
   async (platform) => {
@@ -1198,36 +1195,31 @@ it.each(["darwin", "win32"] as const)(
 it.each([
   ["value", 650],
   ["name", 100],
-] as const)(
-  "preserves long text outside the scroll view in the %s field",
-  async (field, lines) => {
-    const text = `${"Document line\n".repeat(lines)}End of document`;
-    const bounds = { x: 0, y: 0, width: 800, height: 600 };
-    const window = {
-      role: "window",
-      name: "Editor",
-      bounds,
-      tree: async () => ({ name: "Editor", children: [{ [field]: text, children: [] }] }),
-      children: async () => [
-        { role: "text_area", [field]: text, bounds, children: async () => [] },
-      ],
-    };
-    accessibilityByPidMock.mockReset().mockResolvedValue({ children: async () => [window] });
-    accessibilityForegroundMock
-      .mockReset()
-      .mockResolvedValue({ pid: 123, children: async () => [window] });
-    const result = await readAccessibleWindowContext(
-      { title: "Editor", bounds, owner: { processId: 123 } },
-      "darwin",
-      "Editor",
-    );
-    assert.deepEqual(result?.accessibility, {
-      format: "flat-text",
-      text: `Editor\n${text}`,
-      truncated: false,
-    });
-  },
-);
+] as const)("preserves long text outside the scroll view in the %s field", async (field, lines) => {
+  const text = `${"Document line\n".repeat(lines)}End of document`;
+  const bounds = { x: 0, y: 0, width: 800, height: 600 };
+  const window = {
+    role: "window",
+    name: "Editor",
+    bounds,
+    tree: async () => ({ name: "Editor", children: [{ [field]: text, children: [] }] }),
+    children: async () => [{ role: "text_area", [field]: text, bounds, children: async () => [] }],
+  };
+  accessibilityByPidMock.mockReset().mockResolvedValue({ children: async () => [window] });
+  accessibilityForegroundMock
+    .mockReset()
+    .mockResolvedValue({ pid: 123, children: async () => [window] });
+  const result = await readAccessibleWindowContext(
+    { title: "Editor", bounds, owner: { processId: 123 } },
+    "darwin",
+    "Editor",
+  );
+  assert.deepEqual(result?.accessibility, {
+    format: "flat-text",
+    text: `Editor\n${text}`,
+    truncated: false,
+  });
+});
 
 it.each([
   ["com.google.Chrome", "Google Chrome â€“ Profile"],
@@ -1511,7 +1503,3 @@ it.effect.each([false, true])(
     );
   },
 );
-
-
-
-

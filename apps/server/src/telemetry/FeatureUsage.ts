@@ -41,6 +41,7 @@ const COMMAND_FEATURES: {
   "thread.runtime-mode.set": (command) => use("thread.runtime_mode.set", command.runtimeMode),
   "thread.interaction-mode.set": (command) =>
     use("thread.interaction_mode.set", command.interactionMode),
+  "thread.agent-role.set": (command) => use("thread.agent_role.set", command.agentRole ?? "none"),
   "run.interrupt": () => ({ feature: "run.interrupt" }),
   "queued-message.promote-to-steer": () => ({ feature: "queue.steer" }),
   "queued-run.edit": () => ({ feature: "queue.edit" }),

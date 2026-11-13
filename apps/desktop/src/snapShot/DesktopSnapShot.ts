@@ -289,10 +289,7 @@ async function iconDataUrl(
   }
 }
 
-function snapShotAppName(
-  active: ActiveWindow | undefined,
-  sourceName: string,
-): string {
+function snapShotAppName(active: ActiveWindow | undefined, sourceName: string): string {
   const appName = active?.owner.name.trim() || sourceName.trim() || "Window";
   if (active?.platform !== "windows") return appName;
   return appName.replace(/\.exe$/i, "").trim() || appName;
@@ -451,17 +448,16 @@ async function captureSource({
     }
     const contextPromise = accessibilityRead?.result ?? Promise.resolve(undefined);
     await revealPreparation;
-    const animationStarted =
-      (await showCaptureFeedback(
-        transition,
-        flash,
-        captureId,
-        `data:image/png;base64,${png.toString("base64")}`,
-        settings,
-        active,
-        platform,
-        destinationWindowBounds,
-      ));
+    const animationStarted = await showCaptureFeedback(
+      transition,
+      flash,
+      captureId,
+      `data:image/png;base64,${png.toString("base64")}`,
+      settings,
+      active,
+      platform,
+      destinationWindowBounds,
+    );
     return {
       source,
       active,
@@ -770,8 +766,7 @@ export const make = Effect.gen(function* () {
   const persistCapture = Effect.fn("desktop.snapShot.persistCapture")(function* (
     capture: Effect.Success<ReturnType<typeof prepareCapture>>,
   ) {
-    const { id, capturedAt, source, active, contextPromise, png, imageTempReady } =
-      capture;
+    const { id, capturedAt, source, active, contextPromise, png, imageTempReady } = capture;
     const imagePath = path.join(captureDirectory, `${id}.png`);
     const imageTempPath = path.join(captureDirectory, `${id}.tmp.png`);
     const metadataPath = path.join(captureDirectory, `${id}.json`);
@@ -793,14 +788,8 @@ export const make = Effect.gen(function* () {
         source: {
           kind: "snap-shot",
           capturedAt,
-          appName:
-            boundedSnapShotString(snapShotAppName(active, source.name), 255) ??
-            "Window",
-          windowTitle:
-            boundedSnapShotString(
-              active?.title.trim() || source.name,
-              1_000,
-            ) ?? "",
+          appName: boundedSnapShotString(snapShotAppName(active, source.name), 255) ?? "Window",
+          windowTitle: boundedSnapShotString(active?.title.trim() || source.name, 1_000) ?? "",
           ...(accessibilityContext?.accessibleText
             ? { accessibleText: accessibilityContext.accessibleText }
             : {}),
@@ -935,7 +924,7 @@ export const make = Effect.gen(function* () {
       settings.snapShotEnabled !== previousSettings.snapShotEnabled ||
       settings.snapShotIncludeAccessibility !== previousSettings.snapShotIncludeAccessibility ||
       !sameSnapShotShortcut(shortcut, previousSettings.snapShotShortcut);
-    if (!forceShortcut && (initialized && !shortcutInputsChanged)) {
+    if (!forceShortcut && initialized && !shortcutInputsChanged) {
       yield* Ref.update(stateRef, (state) => ({ ...state, shortcut }));
       return;
     }
@@ -953,8 +942,7 @@ export const make = Effect.gen(function* () {
         shortcut,
         shortcutRegistered: false,
         shortcutMessage: null,
-        message:
-          mode === "unavailable" ? "SnapShots are not supported on this platform." : null,
+        message: mode === "unavailable" ? "SnapShots are not supported on this platform." : null,
       });
       return;
     }
@@ -1171,9 +1159,7 @@ export const make = Effect.gen(function* () {
                   : state;
               return { ...recovered, macPermissions, ...(message ? { message } : {}) };
             })
-          : Effect.succeed(
-              environment.platform === "win32" ? { ...state, windows: true } : state,
-            ),
+          : Effect.succeed(environment.platform === "win32" ? { ...state, windows: true } : state),
       ),
       Effect.map((state) => ({ ...state, shortcutVerified })),
     ),

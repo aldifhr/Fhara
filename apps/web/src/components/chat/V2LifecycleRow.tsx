@@ -61,6 +61,12 @@ import { getTriggerDisplayModelName } from "./providerIconUtils";
 import { ProviderInstanceIcon, providerTextColor } from "./ProviderInstanceIcon";
 import { cn } from "~/lib/utils";
 import { TimelineSystemDivider } from "./TimelineSystemDivider";
+import {
+  agentRoleSummary,
+  roleAvatarClass,
+  roleTaskStatusLabel,
+  type AgentRoleTaskStatus,
+} from "./agentRoleTask.logic";
 import { subagentResumedSince } from "./V2LifecycleRow.logic";
 import { Button, InlineButton } from "../ui/button";
 import { T3Wordmark } from "../T3Wordmark";
@@ -438,6 +444,12 @@ function SubagentTimelineLink(props: {
   const liveStatus = agent?.status ?? props.status;
   const status = props.event ? props.event.status : liveStatus;
   const statusLabel = props.event?.label ?? subagentStatusVisual(liveStatus).label;
+  const roleSummary = agentRoleSummary(agent?.role);
+  const roleState =
+    roleSummary !== null && (status ?? liveStatus) !== null
+      ? ((status ?? liveStatus) as AgentRoleTaskStatus)
+      : null;
+  const roleStatusLabel = roleState === null ? null : roleTaskStatusLabel(roleState);
   const result = (agent?.result ?? props.result)?.trim();
   const progress = (agent?.progress ?? props.progress)?.trim();
   const settled = SETTLED_SUBAGENT_STATUSES.has(status ?? liveStatus);
@@ -452,16 +464,29 @@ function SubagentTimelineLink(props: {
   };
   const content = (
     <>
-      <EnvironmentSubagentAvatar
-        environmentId={props.parentRef.environmentId}
-        providerInstanceId={props.providerInstanceId}
-        driver={props.driver}
-        remote={remote}
-        status={status ?? undefined}
-      />
+      {roleSummary !== null ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-full text-2xs font-semibold",
+            roleAvatarClass(roleSummary.id),
+          )}
+        >
+          {roleSummary.displayName.charAt(0)}
+        </span>
+      ) : (
+        <EnvironmentSubagentAvatar
+          environmentId={props.parentRef.environmentId}
+          providerInstanceId={props.providerInstanceId}
+          driver={props.driver}
+          remote={remote}
+          status={status ?? undefined}
+        />
+      )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className="min-w-0 truncate text-xs font-medium text-foreground">
+            {roleSummary !== null ? `${roleSummary.displayName}: ` : ""}
             {props.title}
           </span>
           {remote !== undefined ? (
@@ -475,7 +500,7 @@ function SubagentTimelineLink(props: {
           )}
         >
           {detail === null ? (
-            statusLabel
+            (roleStatusLabel ?? statusLabel)
           ) : detail.includes("/") && !detail.includes(" ") ? (
             <MiddleTruncate value={detail} showTitle={false} className="flex" />
           ) : (
@@ -485,9 +510,20 @@ function SubagentTimelineLink(props: {
       </span>
       {detail !== null && (props.event !== undefined || status !== "completed") ? (
         <span
-          className={cn("shrink-0 text-xs", failed ? "text-destructive" : "text-muted-foreground")}
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium",
+            roleSummary !== null
+              ? roleState === "waiting"
+                ? "bg-warning/15 text-warning-foreground"
+                : roleState === "completed"
+                  ? "bg-success/15 text-success-foreground"
+                  : "bg-muted text-muted-foreground"
+              : failed
+                ? "text-destructive"
+                : "text-muted-foreground",
+          )}
         >
-          {statusLabel}
+          {roleStatusLabel ?? statusLabel}
         </span>
       ) : null}
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
@@ -502,7 +538,9 @@ function SubagentTimelineLink(props: {
     </>
   );
   const className =
-    "group/subagent flex w-full min-w-0 items-center gap-2.5 rounded-md px-2 py-1.5 text-left";
+    roleSummary !== null
+      ? "group/subagent flex w-full min-w-0 items-center gap-2.5 rounded-lg border bg-card px-2.5 py-2 text-left shadow-xs"
+      : "group/subagent flex w-full min-w-0 items-center gap-2.5 rounded-md px-2 py-1.5 text-left";
   return (
     <Tooltip>
       <TooltipTrigger

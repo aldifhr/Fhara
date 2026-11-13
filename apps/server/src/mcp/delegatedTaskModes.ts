@@ -89,7 +89,9 @@ export function resolveInteractionMode(
 }
 
 /** The agent role a delegation asked for, if it names one of the fixed roles. */
-export function delegatedRole(input: Pick<OrchestratorMcpDelegateTaskInput, "role">): Role | undefined {
+export function delegatedRole(
+  input: Pick<OrchestratorMcpDelegateTaskInput, "role">,
+): Role | undefined {
   return input.role === undefined ? undefined : findRole(input.role);
 }
 

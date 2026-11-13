@@ -63,8 +63,8 @@ export class ElectronSafeStorage extends Context.Service<
 >()("@t3tools/desktop/electron/ElectronSafeStorage") {}
 
 /** @public */
-export const make = Effect.gen(function* () {
-  return ElectronSafeStorage.of({
+export const make = Effect.sync(() =>
+  ElectronSafeStorage.of({
     isEncryptionAvailable: Effect.try({
       try: () => Electron.safeStorage.isEncryptionAvailable(),
       catch: (cause) => new ElectronSafeStorageAvailabilityError({ cause }),
@@ -81,7 +81,7 @@ export const make = Effect.gen(function* () {
         catch: (cause) => new ElectronSafeStorageDecryptError({ cause }),
       });
     }),
-  });
-});
+  }),
+);
 
 export const layer = Layer.effect(ElectronSafeStorage, make);

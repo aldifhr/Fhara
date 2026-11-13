@@ -44,6 +44,7 @@ import {
   dismissThreadUserInput,
   revertThreadCheckpoint,
   setThreadInteractionMode,
+  setThreadAgentRole,
   setThreadRuntimeMode,
   pinThread,
   reorderPinnedThread,
@@ -301,6 +302,12 @@ export function createThreadEnvironmentAtoms<R, E>(
     setInteractionMode: createEnvironmentCommand(runtime, {
       label: "environment-data:commands:thread:set-interaction-mode",
       execute: setThreadInteractionMode,
+      scheduler,
+      concurrency,
+    }),
+    setAgentRole: createEnvironmentCommand(runtime, {
+      label: "environment-data:commands:thread:set-agent-role",
+      execute: setThreadAgentRole,
       scheduler,
       concurrency,
     }),

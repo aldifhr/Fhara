@@ -11,6 +11,7 @@ import { useLocation, useRouter, type AnyRouter } from "@tanstack/react-router";
 
 import { moveWorkspaceFocus, workspaceAreaProps } from "../lib/workspaceFocus";
 import { isCommandPaletteOpen } from "../commandPaletteBus";
+import { AppIconRail } from "./AppIconRail";
 import { isElectron } from "../env";
 import {
   releaseThreadUndoShortcut,
@@ -468,6 +469,7 @@ export function AppSidebarLayout({
             <Sidebar
               side="left"
               collapsible="offcanvas"
+              leading={<AppIconRail />}
               data-app-sidebar=""
               {...sidebarArea}
               role="navigation"

@@ -38,6 +38,8 @@ describe("role scope check", () => {
   });
 
   it("skips children without a fixed role", async () => {
-    expect(await checkRoleScope({ roleId: "general", cwd: "/", baseRef: "x", runGit: async () => "" })).toBeNull();
+    expect(
+      await checkRoleScope({ roleId: "general", cwd: "/", baseRef: "x", runGit: async () => "" }),
+    ).toBeNull();
   });
 });

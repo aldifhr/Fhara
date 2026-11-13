@@ -803,5 +803,4 @@ describe("DesktopShellEnvironment", () => {
       assert.deepEqual(env, { PATH: "C:\\Shell\\Bin;C:\\Windows\\System32" });
     }),
   );
-
 });

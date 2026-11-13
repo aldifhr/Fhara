@@ -166,6 +166,7 @@ function commandThreadIds(command: OrchestrationV2Command): ReadonlyArray<Thread
     case "thread.title.regeneration.complete":
     case "thread.runtime-mode.set":
     case "thread.interaction-mode.set":
+    case "thread.agent-role.set":
     case "thread.model-selection.set":
     case "provider-session.detach":
     case "message.dispatch":

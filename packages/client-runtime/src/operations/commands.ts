@@ -1,5 +1,6 @@
 import { remapComposerContextAttachments } from "@t3tools/shared/composerContextReferences";
 import {
+  type AgentRoleId,
   type ThreadLinkedPullRequest,
   CommandId,
   CheckpointId,
@@ -154,6 +155,10 @@ export interface SetThreadRuntimeModeInput extends ThreadCommandInput {
 
 export interface SetThreadInteractionModeInput extends ThreadCommandInput {
   readonly interactionMode: ProviderInteractionMode;
+}
+
+export interface SetThreadAgentRoleInput extends ThreadCommandInput {
+  readonly agentRole: AgentRoleId | null;
 }
 
 interface StartThreadBootstrap {
@@ -731,6 +736,17 @@ export const setThreadInteractionMode = Effect.fn("EnvironmentCommands.setThread
     });
   },
 );
+
+export const setThreadAgentRole = Effect.fn("EnvironmentCommands.setThreadAgentRole")(function* (
+  input: SetThreadAgentRoleInput,
+) {
+  return yield* dispatch({
+    type: "thread.agent-role.set",
+    commandId: yield* allocateCommandId(input),
+    threadId: input.threadId,
+    agentRole: input.agentRole,
+  });
+});
 
 export const startThreadTurn = Effect.fn("EnvironmentCommands.startThreadTurn")(function* (
   input: StartThreadTurnInput,

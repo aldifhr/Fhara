@@ -637,6 +637,7 @@ function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
     case "thread.project.adopt-folder":
     case "thread.runtime-mode.set":
     case "thread.interaction-mode.set":
+    case "thread.agent-role.set":
     case "thread.model-selection.set":
     case "provider-session.detach":
     case "message.dispatch":
@@ -3897,6 +3898,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           | "thread.title.regeneration.complete"
           | "thread.runtime-mode.set"
           | "thread.interaction-mode.set"
+          | "thread.agent-role.set"
           | "thread.model-selection.set"
           | "provider.switch";
       }
@@ -4868,6 +4870,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           return { ...thread, runtimeMode: command.runtimeMode, updatedAt: now };
         case "thread.interaction-mode.set":
           return { ...thread, interactionMode: command.interactionMode, updatedAt: now };
+        case "thread.agent-role.set":
+          return { ...thread, agentRole: command.agentRole, updatedAt: now };
         case "thread.model-selection.set":
         case "provider.switch":
           return {
@@ -4953,6 +4957,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           return "thread.runtime-mode-updated" as const;
         case "thread.interaction-mode.set":
           return "thread.interaction-mode-updated" as const;
+        case "thread.agent-role.set":
+          return "thread.agent-role-updated" as const;
         case "thread.model-selection.set":
           return thread.providerInstanceId === command.modelSelection.instanceId
             ? ("thread.model-selection-updated" as const)
@@ -7821,6 +7827,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         text: dispatchText,
         ...(command.context ? { context: command.context } : {}),
         attachments: command.attachments,
+        ...(command.delegatedCompletion !== undefined
+          ? { delegatedCompletion: command.delegatedCompletion }
+          : {}),
         ...(freshContext ? { freshContext: true } : {}),
         ...(run.contextHandoffId === null ? modelSwitchSince(projection, modelSelection) : {}),
       };
@@ -8609,6 +8618,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       text: dispatchText,
       ...(command.context ? { context: command.context } : {}),
       attachments: command.attachments,
+      ...(command.delegatedCompletion !== undefined
+        ? { delegatedCompletion: command.delegatedCompletion }
+        : {}),
       ...(run.contextHandoffId === null
         ? modelSwitchSince(
             projection,
@@ -9100,6 +9112,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         }),
         runtimeMode: command.runtimeMode,
         interactionMode: command.interactionMode,
+        ...(command.role === undefined ? {} : { agentRole: command.role }),
         ...(command.workspaceStrategy === undefined ? {} : { branch: null, worktreePath: null }),
       };
       const task: OrchestrationV2Subagent = {
@@ -9116,6 +9129,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         nativeTaskRef: null,
         prompt: command.task,
         title: command.title ?? null,
+        ...(command.role === undefined ? {} : { role: command.role }),
         model: command.modelSelection.model,
         ...(command.completionWake === undefined ? {} : { completionWake: command.completionWake }),
         status: "running",
@@ -14556,6 +14570,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       case "thread.title.regeneration.complete":
       case "thread.runtime-mode.set":
       case "thread.interaction-mode.set":
+      case "thread.agent-role.set":
       case "thread.model-selection.set":
       case "provider.switch":
         yield* dispatchThreadMutation(command, events, effects);

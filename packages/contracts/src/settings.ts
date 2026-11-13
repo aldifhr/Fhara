@@ -20,6 +20,7 @@ import {
   TrimmedNonEmptyString,
   TrimmedString,
 } from "./baseSchemas.ts";
+import type { AgentRoleId } from "./agentRoles.ts";
 import { UsageLimitSourceId } from "./usageLimitSourceId.ts";
 import { UsageModelFilter } from "./usage.ts";
 import { SecretProviderId, SecretProviderSlug } from "./secretReference.ts";
@@ -1415,6 +1416,10 @@ export const ServerSettings = Schema.Struct({
   fallbackModelSelection: Schema.NullOr(ModelSelection).pipe(
     Schema.withDecodingDefault(Effect.succeed(null)),
   ),
+  /** Per-agent-role model overrides; null or absent inherits the project, then environment default. */
+  agentModelOverrides: Schema.Record(Schema.String, Schema.NullOr(ModelSelection)).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
   defaultRuntimeMode: RuntimeMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_RUNTIME_MODE)),
   ),
@@ -1656,6 +1661,15 @@ export const resolveTextGenerationSelectionEnabled = (
   textGeneratorForSelection(settings, instanceId)?.enabled ??
   resolveProjectProviderInstanceEnabled(settings, projectId, instanceId);
 
+/** The model override saved for an agent role; null inherits the project, then environment default. */
+export const agentModelOverrideFor = (
+  settings: Pick<ServerSettings, "agentModelOverrides">,
+  roleId: AgentRoleId,
+): ModelSelection | null =>
+  Object.hasOwn(settings.agentModelOverrides, roleId)
+    ? (settings.agentModelOverrides[roleId] ?? null)
+    : null;
+
 const decodeClaudeSettings = Schema.decodeUnknownOption(ClaudeSettings);
 
 type IdleCompactionSettings = Pick<ServerSettings, "compactIdleThreads" | "idleCompaction">;
@@ -1855,6 +1869,9 @@ export const ServerSettingsPatch = Schema.Struct({
     Schema.Record(ProjectId, Schema.NullOr(Schema.Boolean)),
   ),
   defaultModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
+  agentModelOverrides: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.NullOr(ModelSelection)),
+  ),
   defaultRuntimeMode: Schema.optionalKey(RuntimeMode),
   fallbackModelSelection: Schema.optionalKey(Schema.NullOr(ModelSelection)),
   /** Replaces each project's override set; null removes it. Omitted providerInstances retains its stored value. */

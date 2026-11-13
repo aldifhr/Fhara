@@ -22,7 +22,6 @@
     "@effect/vitest": "catalog:",
     "@types/plist": "catalog:",
     "esbuild": "0.28.2",
-    "postject": "1.0.0-alpha.6",
     "typescript-legacy": "npm:typescript@~6.0.3",
     "vite-plus": "catalog:"
   }

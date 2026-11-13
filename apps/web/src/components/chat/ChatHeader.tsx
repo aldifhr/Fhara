@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -52,6 +53,9 @@ interface ChatHeaderProps {
   activeProject: EnvironmentProject | null;
   parentThreadLink: { threadId: ThreadId; title: string } | null;
   onOpenThread: (threadId: ThreadId) => void;
+  breadcrumbHidden?: boolean | undefined;
+  /** Rendered in place of the breadcrumb, on the titlebar line. */
+  roomHeader?: ReactNode | undefined;
   rightPanelOpen: boolean;
   onNewThreadInProject: () => void;
   onOpenProjectSettings?: (() => void) | undefined;
@@ -77,6 +81,9 @@ export const ChatHeader = memo(function ChatHeader({
   activeProject,
   parentThreadLink,
   onOpenThread,
+  /** The room header replaces the breadcrumb in project chat rooms. */
+  breadcrumbHidden,
+  roomHeader,
   rightPanelOpen,
   onNewThreadInProject,
   onOpenProjectSettings,
@@ -244,6 +251,10 @@ export const ChatHeader = memo(function ChatHeader({
       setRenaming(null);
     }
   };
+  if (breadcrumbHidden === true && roomHeader !== undefined && roomHeader !== null) {
+    return <div className="flex min-w-0 flex-1 items-center">{roomHeader}</div>;
+  }
+  if (breadcrumbHidden === true) return null;
   return (
     <div
       ref={breadcrumbContainerRef}

@@ -31,7 +31,9 @@ describe("delegate_task role", () => {
   it("keeps legacy task kinds unchanged", () => {
     expect(taskPrompt({ task: "t" })).toBe("t");
     expect(taskPrompt({ task: "t", role: "general" })).toBe("t");
-    expect(taskPrompt({ task: "t", role: "review" })).toBe("Act as the review sub-agent for this task.\n\nt");
+    expect(taskPrompt({ task: "t", role: "review" })).toBe(
+      "Act as the review sub-agent for this task.\n\nt",
+    );
     expect(delegatedRole({ role: "review" })).toBeUndefined();
   });
 

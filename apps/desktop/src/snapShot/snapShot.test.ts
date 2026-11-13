@@ -317,5 +317,3 @@ describe("toElectronAccelerator", () => {
     expect(toElectronAccelerator(parseKeybindingShortcut(recorded)!)).toBe(accelerator);
   });
 });
-
-

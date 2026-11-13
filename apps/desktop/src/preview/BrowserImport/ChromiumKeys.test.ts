@@ -1,6 +1,5 @@
 ﻿import { describe, expect, it } from "@effect/vitest";
 import * as HostProcess from "@t3tools/shared/HostProcess";
-import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Sink from "effect/Sink";
@@ -10,7 +9,6 @@ import { ChildProcessSpawner } from "effect/process";
 import { beforeEach, vi } from "vite-plus/test";
 
 import {
-  ChromiumKeyError,
   decodeWindowsWrappedKey,
   resolveChromiumKeys,
   unwrapWindowsDpapiKey,

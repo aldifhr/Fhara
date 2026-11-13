@@ -888,6 +888,8 @@ export const runDevRunnerWithInput = Effect.fn("dev-runner.runDevRunnerWithInput
     // Its own process group: teardown signals the whole group, because vp
     // does not pass SIGTERM on to Vite and the server.
     detached: true,
+    // Windows gives detached spawns their own visible console window.
+    windowsHide: true,
     forceKillAfter: "1500 millis",
   }).pipe(
     Effect.mapError(

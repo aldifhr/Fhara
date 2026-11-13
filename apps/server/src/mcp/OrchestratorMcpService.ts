@@ -53,6 +53,7 @@ import {
   type ProviderInteractionMode,
   type ProviderOptionDescriptor,
   type ProviderOptionSelection,
+  type AgentRoleId,
   ProviderRequestKind,
   type RuntimeMode,
   type ScheduledTask,
@@ -118,6 +119,11 @@ import {
   threadLinkFor,
 } from "./McpInvocationContext.ts";
 import * as Metrics from "../observability/Metrics.ts";
+import {
+  AgentModelResolver,
+  layer as agentModelResolverLayer,
+  type ResolvedAgentModel,
+} from "../roles/AgentModelResolver.ts";
 import {
   interactionModeRank,
   resolveInteractionMode,
@@ -1114,6 +1120,7 @@ const make = Effect.gen(function* () {
   const threadLaunch = yield* ThreadLaunchService.ThreadLaunchService;
   const gitDriver = yield* GitVcsDriver.GitVcsDriver;
   const serverSettings = yield* ServerSettings.ServerSettingsService;
+  const agentModels = yield* AgentModelResolver;
   const remoteDelegation = yield* RemoteDelegation.RemoteDelegation;
 
   const requireProject = (projectId: ProjectId) =>
@@ -1373,6 +1380,8 @@ const make = Effect.gen(function* () {
     readonly parent: Pick<OrchestrationV2ThreadProjection, "thread">;
     readonly target: OrchestratorMcpTarget | undefined;
     readonly providers: ReadonlyArray<ServerProvider>;
+    /** A delegated fixed role resolves its model through the agent model resolver. */
+    readonly role?: AgentRoleId;
     /** Receipt replays bypass current settings because they start no work. Dispatch must reuse the checked command ID. */
     readonly skipProjectEnablementFilter?: boolean;
   }): Effect.fn.Return<ResolvedTarget, OrchestratorMcpFailure> {
@@ -1424,6 +1433,24 @@ const make = Effect.gen(function* () {
         );
       }
     }
+    // A delegated role's override, else the project, else the environment default model — unless
+    // the caller picked a provider, a model, or this is a receipt replay of an earlier decision.
+    let agentSelection: ResolvedAgentModel | undefined;
+    if (
+      input.role !== undefined &&
+      input.skipProjectEnablementFilter !== true &&
+      input.target?.providerInstanceId === undefined &&
+      input.target?.driverKind === undefined &&
+      input.target?.model === undefined
+    ) {
+      const resolved = yield* agentModels
+        .resolve(input.role, input.parent.thread.projectId)
+        .pipe(Effect.mapError((cause) => failure("orchestration_error", errorMessage(cause))));
+      if (resolved !== null) {
+        agentSelection = resolved;
+        instanceId = resolved.modelSelection.instanceId;
+      }
+    }
     instanceId ??= input.parent.thread.modelSelection.instanceId;
 
     const provider = input.providers.find((candidate) => candidate.instanceId === instanceId);
@@ -1454,6 +1481,7 @@ const make = Effect.gen(function* () {
     const requestedModel = input.target?.model;
     const model =
       requestedModel ??
+      agentSelection?.modelSelection.model ??
       (instanceId === inheritedSelection.instanceId
         ? inheritedSelection.model
         : provider.models[0]?.slug);
@@ -1478,15 +1506,21 @@ const make = Effect.gen(function* () {
     }
 
     const inheritsOptions =
+      agentSelection === undefined &&
       instanceId === inheritedSelection.instanceId &&
       (advertised?.slug ?? model) ===
         (advertisedModel(provider, inheritedSelection.model)?.slug ?? inheritedSelection.model);
-    let options = inheritsOptions
+    let options = agentSelection
       ? knownOptions(
-          withLegacyUltracodeEffort(descriptors, inheritedSelection.options),
+          withLegacyUltracodeEffort(descriptors, agentSelection.modelSelection.options),
           descriptors,
         )
-      : undefined;
+      : inheritsOptions
+        ? knownOptions(
+            withLegacyUltracodeEffort(descriptors, inheritedSelection.options),
+            descriptors,
+          )
+        : undefined;
     if (requestedOptions !== undefined) {
       const selections = new Map(
         (requestedOptions.length === 0 ? [] : (options ?? [])).map((selection) => [
@@ -2505,10 +2539,12 @@ const make = Effect.gen(function* () {
         operation: "delegate-task",
       });
       const isRetryOfAcceptedDelegation = yield* threadManagement.hasReceipt(commandId);
+      const role = delegatedRole(input)?.id;
       const target = yield* resolveTargetRechecking({
         parent,
         target: input.target,
         providers,
+        ...(role !== undefined ? { role } : {}),
         skipProjectEnablementFilter: isRetryOfAcceptedDelegation,
       });
       const runtimeMode = yield* resolveRuntimeMode(
@@ -2564,6 +2600,7 @@ const make = Effect.gen(function* () {
           parentNodeId: parentRun.rootNodeId,
           task: taskPrompt(input),
           ...(input.title === undefined ? {} : { title: input.title }),
+          ...(role !== undefined ? { role } : {}),
           modelSelection: target.modelSelection,
           runtimeMode,
           interactionMode,
@@ -3402,4 +3439,4 @@ export const layer: Layer.Layer<
   | SecretRequests.SecretRequests
   | ServerSettings.ServerSettingsService
   | RemoteDelegation.RemoteDelegation
-> = Layer.effect(OrchestratorMcpService, make);
+> = Layer.effect(OrchestratorMcpService, make).pipe(Layer.provideMerge(agentModelResolverLayer));

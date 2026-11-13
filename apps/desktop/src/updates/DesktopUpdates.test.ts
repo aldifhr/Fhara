@@ -38,9 +38,7 @@ const { parseXml } = requireFromUpdater("builder-util-runtime") as {
 const semver = requireFromUpdater("semver") as { parse: (version: string) => RunningVersion };
 
 const releaseTitle = (version: string) =>
-  version.includes("-nightly.")
-    ? `Fhara Nightly ${version} (0123456789ab)`
-    : `Fhara v${version}`;
+  version.includes("-nightly.") ? `Fhara Nightly ${version} (0123456789ab)` : `Fhara v${version}`;
 
 const releaseFeed = (...versions: ReadonlyArray<string>) =>
   parseXml(
