@@ -37,6 +37,8 @@ import { ProjectToolkit } from "../mcp/toolkits/project/tools.ts";
 import {
   resolveInteractionMode,
   resolveRuntimeMode,
+  roleInteractionMode,
+  delegatedRole,
   taskPrompt,
 } from "../mcp/delegatedTaskModes.ts";
 import { followUpOwnerRun } from "../orchestration-v2/CommandPolicy.ts";
@@ -317,10 +319,15 @@ const make = Effect.gen(function* () {
         input.runtimeMode === undefined || input.runtimeMode === "inherit"
           ? undefined
           : yield* resolveRuntimeMode(parent.thread.runtimeMode, input.runtimeMode);
+      // Read-only roles are capped at plan mode here too, as for local tasks.
+      const requestedInteractionMode = roleInteractionMode(
+        delegatedRole(input),
+        input.interactionMode,
+      );
       const interactionMode =
-        input.interactionMode === undefined || input.interactionMode === "inherit"
+        requestedInteractionMode === undefined || requestedInteractionMode === "inherit"
           ? undefined
-          : yield* resolveInteractionMode(parent.thread.interactionMode, input.interactionMode);
+          : yield* resolveInteractionMode(parent.thread.interactionMode, requestedInteractionMode);
       const projectId = yield* resolveRemoteProject(
         scope,
         target.environmentId,
