@@ -9,18 +9,13 @@ import * as Path from "effect/Path";
 import { Command, Flag } from "effect/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { DEVELOPMENT_ICON_OVERRIDES } from "../../../scripts/lib/brand-assets.ts";
 import { findEsmImportsOfExternalPackages } from "../../../scripts/lib/cli-executable-imports.ts";
-import { injectLinuxArm64Sea } from "../../../scripts/lib/linux-arm64-sea.ts";
 import rootPackageJson from "../../../package.json" with { type: "json" };
-import * as HostProcess from "@t3tools/shared/HostProcess";
 import { resolveSpawnCommand } from "@t3tools/shared/shell";
 import {
   ServerCliBootstrapTooLargeError,
   ServerCliBuildAssetMissingError,
   ServerCliCommandExitError,
-  ServerCliDevelopmentIconSourceMissingError,
-  ServerCliDevelopmentIconTargetMissingError,
   ServerCliExecutableImportError,
 } from "./cliErrors.ts";
 
@@ -41,30 +36,6 @@ const runCommand = Effect.fn("runCommand")(function* (command: ChildProcess.Stan
       exitCode,
     });
   }
-});
-
-const applyDevelopmentIconOverrides = Effect.fn("applyDevelopmentIconOverrides")(function* (
-  repoRoot: string,
-  serverDir: string,
-) {
-  const path = yield* Path.Path;
-  const fs = yield* FileSystem.FileSystem;
-
-  for (const override of DEVELOPMENT_ICON_OVERRIDES) {
-    const sourcePath = path.join(repoRoot, override.sourceRelativePath);
-    const targetPath = path.join(serverDir, override.targetRelativePath);
-
-    if (!(yield* fs.exists(sourcePath))) {
-      return yield* new ServerCliDevelopmentIconSourceMissingError({ sourcePath });
-    }
-    if (!(yield* fs.exists(targetPath))) {
-      return yield* new ServerCliDevelopmentIconTargetMissingError({ targetPath });
-    }
-
-    yield* fs.copyFile(sourcePath, targetPath);
-  }
-
-  yield* Effect.log("[cli] Applied development icon overrides to dist/client");
 });
 
 const buildCmd = Command.make(
@@ -94,7 +65,6 @@ const buildCmd = Command.make(
 
       if (yield* fs.exists(webDist)) {
         yield* fs.copy(webDist, clientTarget);
-        yield* applyDevelopmentIconOverrides(repoRoot, serverDir);
         yield* Effect.log("[cli] Bundled web app into dist/client");
       } else {
         yield* Effect.logWarning("[cli] Web dist not found. Skipping client bundle.");
@@ -122,11 +92,6 @@ const buildExeCmd = Command.make(
 
       yield* Effect.log("[cli] Building single-executable...");
       const target = Option.getOrUndefined(config.target);
-      // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-      const linuxArm64 =
-        !target &&
-        (yield* HostProcess.Platform) === "linux" &&
-        (yield* HostProcess.Architecture) === "arm64";
       const spawnCommand = yield* resolveSpawnCommand("vp", ["pack"]);
       const cliAssetDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-cli-asset-" });
       const pack = (packMode: "bundle" | "bootstrap" | "1") =>
@@ -147,7 +112,7 @@ const buildExeCmd = Command.make(
 
       yield* pack("bundle");
       const cliMainPath = path.join(cliAssetDir, "binMain.mjs");
-      yield* pack(linuxArm64 ? "bootstrap" : "1");
+      yield* pack("1");
 
       // Executables reject non-builtin imports even when bundling succeeds; inspect the emitted graph.
       const bootstrapPath = path.join(serverDir, "dist-exe/bin.mjs");
@@ -163,16 +128,6 @@ const buildExeCmd = Command.make(
         return yield* new ServerCliBootstrapTooLargeError({
           bootstrapPath,
           bytes: Number(bootstrapBytes),
-        });
-      }
-      // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
-      if (linuxArm64) {
-        yield* injectLinuxArm64Sea({
-          bundlePath: bootstrapPath,
-          cliAssetPath: cliMainPath,
-          outputPath: path.join(serverDir, "dist-exe/t3"),
-          nodeVersion: rootPackageJson.engines.node,
-          verbose: config.verbose,
         });
       }
       yield* Effect.log(
@@ -225,7 +180,7 @@ const publishCmd = Command.make(
 ).pipe(Command.withDescription("Publish the t3 launcher to npm."));
 
 const cli = Command.make("cli").pipe(
-  Command.withDescription("T3 server build & publish CLI."),
+  Command.withDescription("Fhara server build & publish CLI."),
   Command.withSubcommands([buildCmd, buildExeCmd, publishCmd]),
 );
 

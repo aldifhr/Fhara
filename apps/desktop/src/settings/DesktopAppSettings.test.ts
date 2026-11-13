@@ -13,9 +13,6 @@ import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 import * as DesktopAppSettings from "./DesktopAppSettings.ts";
 
 const DesktopSettingsPatch = Schema.Struct({
-  linuxPasswordStore: Schema.optionalKey(
-    Schema.Literals(["auto", "gnome-libsecret", "kwallet", "kwallet5", "kwallet6"]),
-  ),
   mainWindowBounds: Schema.optionalKey(
     Schema.NullOr(
       Schema.Struct({
@@ -223,7 +220,6 @@ describe("DesktopSettings", () => {
         );
 
         assert.deepEqual(yield* settings.load, {
-          linuxPasswordStore: "auto",
           localEnvironmentEnabled: true,
           mainWindowBounds: { x: 120, y: 80, width: 1280, height: 900 },
           mainWindowMaximized: false,
@@ -354,7 +350,6 @@ describe("DesktopSettings", () => {
         });
 
         assert.deepEqual(yield* settings.load, {
-          linuxPasswordStore: "auto",
           localEnvironmentEnabled: true,
           mainWindowBounds: null,
           mainWindowMaximized: false,
@@ -383,7 +378,6 @@ describe("DesktopSettings", () => {
         });
 
         assert.deepEqual(yield* settings.load, {
-          linuxPasswordStore: "auto",
           localEnvironmentEnabled: true,
           mainWindowBounds: null,
           mainWindowMaximized: false,

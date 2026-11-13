@@ -7245,7 +7245,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       const queueIsHeld = projection.runs.some(
         (candidate) => candidate.status === "queued" && candidate.queueHeld === true,
       );
-      // Buffered wakes need a T3 run for output the CLI already started producing.
+      // Buffered wakes need a Fhara run for output the CLI already started producing.
       // Stop still holds wakes that arrive before the active run settles.
       const wakeSkipsHold =
         !worktreeSetupUnresolved &&

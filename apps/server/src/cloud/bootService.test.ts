@@ -56,7 +56,7 @@ const windowsTaskOptions = {
   conhostPath: "C:\\Windows\\System32\\conhost.exe",
 };
 
-it("reads the served T3 home and log back out of a rendered unit, plist, or task", () => {
+it("reads the served Fhara home and log back out of a rendered unit, plist, or task", () => {
   const plan = (baseDir: string) => ({
     program: [`${baseDir}/runtime/versions/1.2.3/t3`, "__service-launcher"],
     baseDir,
@@ -69,12 +69,12 @@ it("reads the served T3 home and log back out of a rendered unit, plist, or task
   ).toBe("/home/theo/.t3");
   expect(
     BootService.bootServiceBaseDirOf(
-      BootService.renderBootServiceUnit(plan("/home/theo/T3 Data/100%")),
+      BootService.renderBootServiceUnit(plan("/home/theo/Fhara Data/100%")),
     ),
-  ).toBe("/home/theo/T3 Data/100%");
+  ).toBe("/home/theo/Fhara Data/100%");
   expect(
-    serviceUnitLogPathOf(BootService.renderBootServiceUnit(plan("/home/theo/T3 Data/100%"))),
-  ).toBe("/home/theo/T3 Data/100%/userdata/logs/boot-service.log");
+    serviceUnitLogPathOf(BootService.renderBootServiceUnit(plan("/home/theo/Fhara Data/100%"))),
+  ).toBe("/home/theo/Fhara Data/100%/userdata/logs/boot-service.log");
   expect(
     serviceUnitLogPathOf(
       BootService.renderBootServicePlist(plan("/Users/theo/a&b"), {
@@ -93,9 +93,9 @@ it("reads the served T3 home and log back out of a rendered unit, plist, or task
   ).toBe("/Users/theo/a&b");
   expect(
     BootService.bootServiceBaseDirOf(
-      BootService.renderBootServiceTask(plan("C:\\Users\\theo\\T3 a&b\\"), windowsTaskOptions),
+      BootService.renderBootServiceTask(plan("C:\\Users\\theo\\Fhara a&b\\"), windowsTaskOptions),
     ),
-  ).toBe("C:\\Users\\theo\\T3 a&b\\");
+  ).toBe("C:\\Users\\theo\\Fhara a&b\\");
   expect(BootService.bootServiceBaseDirOf("[Service]\nExecStart=/x\n")).toBeUndefined();
 });
 
@@ -119,7 +119,7 @@ it("protects the server unit from agents under CPU and memory pressure", () => {
 });
 
 it.each([
-  ["a unit", "/home/theo/T3 Data/100%$x", BootService.renderBootServiceUnit],
+  ["a unit", "/home/theo/Fhara Data/100%$x", BootService.renderBootServiceUnit],
   [
     "a plist",
     "/Users/theo/a&b <c>",
@@ -128,7 +128,7 @@ it.each([
   ],
   [
     "a task",
-    "C:\\Users\\theo\\T3 a&b <c>",
+    "C:\\Users\\theo\\Fhara a&b <c>",
     (plan: BootService.BootServicePlan) =>
       BootService.renderBootServiceTask(plan, windowsTaskOptions),
   ],
@@ -143,11 +143,11 @@ it.each([
 
 // systemd rejects a unit whose executable has a control character, quote or backslash, even quoted.
 it.each([
-  ["a double quote", '/home/theo/T3 "Data"'],
-  ["a single quote", "/home/theo/Theo's T3"],
-  ["a backslash", "/home/theo/T3\\Data"],
-  ["a newline", "/home/theo/T3\nData"],
-])("renders a loadable unit, or refuses, for a T3 home with %s", (_, baseDir) => {
+  ["a double quote", '/home/theo/Fhara "Data"'],
+  ["a single quote", "/home/theo/Theo's Fhara"],
+  ["a backslash", "/home/theo/Fhara\\Data"],
+  ["a newline", "/home/theo/Fhara\nData"],
+])("renders a loadable unit, or refuses, for a Fhara home with %s", (_, baseDir) => {
   let unit: string;
   try {
     unit = BootService.renderBootServiceUnit({
@@ -628,7 +628,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
     "preserves the custom install bin directory in the installed service on %s",
     (platform) =>
       Effect.gen(function* () {
-        const installBinDir = '/custom/T3\t& <100%>/"quoted"\\bin';
+        const installBinDir = '/custom/Fhara\t& <100%>/"quoted"\\bin';
         const { service, makeService, fs } = yield* makeHarness(
           platform,
           "",
@@ -640,8 +640,8 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
         const unit = yield* fs.readFileString(plan.unitPath);
         expect(unit).toContain(
           platform === "linux"
-            ? 'Environment=T3CODE_INSTALL_BIN_DIR="/custom/T3\t& <100%%>/\\"quoted\\"\\\\bin"'
-            : '<key>T3CODE_INSTALL_BIN_DIR</key>\n    <string>/custom/T3\t&amp; &lt;100%&gt;/"quoted"\\bin</string>',
+            ? 'Environment=T3CODE_INSTALL_BIN_DIR="/custom/Fhara\t& <100%%>/\\"quoted\\"\\\\bin"'
+            : '<key>T3CODE_INSTALL_BIN_DIR</key>\n    <string>/custom/Fhara\t&amp; &lt;100%&gt;/"quoted"\\bin</string>',
         );
         expect((yield* service.status).current).toBe(true);
 
@@ -1202,7 +1202,7 @@ process.disconnect();
     }),
   );
 
-  it.effect("restart and install leave a service that serves another T3 home alone", () =>
+  it.effect("restart and install leave a service that serves another Fhara home alone", () =>
     Effect.gen(function* () {
       const { service, fs, baseDir, commands, makeService } = yield* makeHarness();
       const plan = yield* service.install();
@@ -1221,7 +1221,7 @@ process.disconnect();
       expect(commands).toEqual([]);
       expect((yield* other.status).otherBaseDir).toBe(baseDir);
 
-      const quoted = yield* makeService(undefined, "1.2.3", path.join(otherHome, 'T3 "Data"'));
+      const quoted = yield* makeService(undefined, "1.2.3", path.join(otherHome, 'Fhara "Data"'));
       commands.length = 0;
       const unloadable = yield* quoted.install().pipe(Effect.flip);
       expect(unloadable._tag).toBe("BootServiceBaseDirUnsupportedError");
@@ -1236,7 +1236,7 @@ process.disconnect();
       const { fs, commands, invocations, control, makeService } = yield* makeHarness();
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-handoff-" });
-      const baseDir = path.join(home, "T3 Data 100%", "${UNSET}", "$literal");
+      const baseDir = path.join(home, "Fhara Data 100%", "${UNSET}", "$literal");
       const outside = yield* makeService(undefined, "1.2.3", baseDir);
       const plan = yield* outside.install();
       const statePath = path.join(baseDir, "runtime", "service-state.json");
@@ -1265,7 +1265,7 @@ process.disconnect();
         "service",
         "install",
         "--base-dir",
-        path.join(home, "T3 Data 100%", "$${UNSET}", "$$literal"),
+        path.join(home, "Fhara Data 100%", "$${UNSET}", "$$literal"),
         "--allow-downgrade",
       ]);
 

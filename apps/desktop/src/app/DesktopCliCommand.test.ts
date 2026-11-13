@@ -3,11 +3,10 @@ import { expect, it } from "@effect/vitest";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
-import * as Option from "effect/Option";
+import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 import * as Path from "effect/Path";
 import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
-import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
 import * as DesktopCliCommand from "./DesktopCliCommand.ts";
 import * as DesktopCliShim from "./DesktopCliShim.ts";
@@ -19,14 +18,13 @@ const environmentFor = (
 ) =>
   DesktopEnvironment.DesktopEnvironment.of({
     path,
-    platform: input.platform ?? "linux",
+    platform: input.platform ?? "win32",
     isPackaged: input.isPackaged ?? true,
     homeDirectory: input.home,
     baseDir: input.baseDir,
     stateDir: path.join(input.baseDir, "userdata"),
     desktopSettingsPath: path.join(input.baseDir, "userdata", "desktop-settings.json"),
-    serverRoot: "/opt/T3 Code/resources/app.asar",
-    appImagePath: Option.none(),
+    serverRoot: "/opt/Fhara/resources/app.asar",
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
 const commandIn = (
@@ -129,7 +127,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* Effect.all([command.addToPath, command.addToPath], { concurrency: "unbounded" });
       expect((yield* command.addToPath).pathSetup).toEqual({ file: "~/.zshrc", added: true });
       expect(yield* fs.readFileString(zshrc)).toBe(
-        '# mine\n# Added by T3 Code\nexport PATH="$PATH:$HOME/.local/bin"\n',
+        '# mine\n# Added by Fhara\nexport PATH="$PATH:$HOME/.local/bin"\n',
       );
 
       expect((yield* command.uninstall).installedPath).toBeNull();
@@ -205,7 +203,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
     }),
   );
 
-  it.effect("finds and removes a link left by a previous T3 home", () =>
+  it.effect("finds and removes a link left by a previous Fhara home", () =>
     Effect.gen(function* () {
       const env: NodeJS.ProcessEnv = { PATH: "", SHELL: "/bin/zsh" };
       const fs = yield* FileSystem.FileSystem;
@@ -400,7 +398,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       // A `;` in the folder would split it into two PATH entries, so nothing is written.
       const split = fakePowerShell(userPath);
       const semicolon = yield* commandIn(
-        { home, baseDir: `${home}\\T3;Home`, platform: "win32" },
+        { home, baseDir: `${home}\\Fhara;Home`, platform: "win32" },
         split.spawner,
       );
       expect((yield* Effect.flip(semicolon.install)).message).toContain('has a ";"');

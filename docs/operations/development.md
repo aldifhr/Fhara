@@ -2,7 +2,7 @@
 
 ## First checkout
 
-T3 Code uses [Vite+](https://viteplus.dev/guide/). Install its global `vp` command:
+Fhara uses [Vite+](https://viteplus.dev/guide/). Install its global `vp` command:
 
 ```sh
 curl -fsSL https://vite.plus | bash
@@ -54,7 +54,7 @@ Add `--browser` to open a browser automatically.
 
 To stop a worktree's dev stack when its thread settles, import the **Dev** action from
 `t3.json` in Settings > Projects > Actions and start it through the action menu or its
-keybinding. Its `stopOnSettle` option lets T3 stop the terminal and its child processes.
+keybinding. Its `stopOnSettle` option lets Fhara stop the terminal and its child processes.
 Running `vp run dev` through an agent's own shell tool does not attach it to this lifecycle.
 
 ### State and ports
@@ -154,7 +154,7 @@ reloads by itself. The license manifest is not generated in this mode. `--built`
 
 Use this only on a hostname where you trust every service. Browsers send cookies to all ports
 on that hostname. Any service you visit there can receive the reusable admin credential,
-including services unrelated to T3 Code. If you run untrusted services on that hostname, keep
+including services unrelated to Fhara. If you run untrusted services on that hostname, keep
 normal per-environment pairing instead.
 
 To use one browser profile across web dev worktrees on the same hostname, generate one fixed

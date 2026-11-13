@@ -295,7 +295,7 @@ export function useComposerMenuItems({
           skill.description ??
           (skill.scope ? `${skill.scope} skill` : ""),
       }));
-      // T3's `/clear` replaces the provider's, which would clear a session T3 still treats as live.
+      // Fhara's `/clear` replaces the provider's, which would clear a session Fhara still treats as live.
       const visibleProviderSlashCommandItems = providerSlashCommandItems.filter(
         (item) =>
           (item.command.name !== "compact" || compactSlashCommandAvailable) &&

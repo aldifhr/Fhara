@@ -845,7 +845,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
       }),
     );
 
-    it.effect("excludes the home directory, temporary root, and T3 data directory", () =>
+    it.effect("excludes the home directory, temporary root, and Fhara data directory", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
@@ -872,7 +872,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
       }),
     );
 
-    it.effect("excludes T3-managed worktree sandboxes", () =>
+    it.effect("excludes Fhara-managed worktree sandboxes", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const claudeHomePath = yield* makeTempDir("t3code-claude-home-");
@@ -945,7 +945,7 @@ it.layer(NodeServices.layer)("AgentSessionScanner", (it) => {
         );
 
         // Not offered: the config is unreadable, so the repository could be bare; and
-        // the main checkout is reached through a symlink into T3's own state.
+        // the main checkout is reached through a symlink into Fhara's own state.
         const configBaseDir = yield* fileSystem.realPath(
           yield* makeTempDir("t3code-scanner-base-"),
         );

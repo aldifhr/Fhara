@@ -174,7 +174,7 @@ const parseModeLimit = (value: string) => {
 const invalidModeLimit = HttpServerResponse.jsonUnsafe(
   {
     error: "invalid_mode_limit",
-    message: "T3-Mode-Limit must be <runtimeMode>/<interactionMode>, e.g. auto/default.",
+    message: "Fhara-Mode-Limit must be <runtimeMode>/<interactionMode>, e.g. auto/default.",
   },
   { status: 400, headers: { "cache-control": "no-store" } },
 );
@@ -1307,7 +1307,7 @@ export const layerInProcessMcpServer = McpServer.middleware<{
 
 export const layerMcpTransport = <RA, RE, RR>(registrations: Layer.Layer<RA, RE, RR>) =>
   McpServer.layerHttp({
-    name: "T3 Code",
+    name: "Fhara",
     version: packageJson.version,
     path: "/mcp",
     // The first protocol is the fallback for clients that offer an unknown version.
@@ -1316,7 +1316,7 @@ export const layerMcpTransport = <RA, RE, RR>(registrations: Layer.Layer<RA, RE,
     registrations,
   }).pipe(Layer.provide(layerMcpAuthMiddleware));
 
-/** Every tool the T3 MCP server advertises. AgentContextBudget.test.ts measures this set. */
+/** Every tool the Fhara MCP server advertises. AgentContextBudget.test.ts measures this set. */
 export const layerTools = Layer.mergeAll(
   layerPreviewToolkit,
   layerOrchestratorToolkit,

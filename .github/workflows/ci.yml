@@ -2,7 +2,7 @@ name: CI
 
 # Fhara CI: install, typecheck the server, web, desktop and the packages they use, then lint.
 # No installer is built and no release runs here.
-# Upstream T3 Code ran on Blacksmith runners with desktop, mobile and release jobs;
+# Upstream Fhara ran on Blacksmith runners with desktop, mobile and release jobs;
 # mobile, marketing and release jobs were removed.
 on:
   push:

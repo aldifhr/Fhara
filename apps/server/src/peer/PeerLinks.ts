@@ -183,7 +183,7 @@ const connectionCode = (cause: unknown) =>
     .map((error) => (Predicate.hasProperty(error, "code") ? error.code : undefined))
     .find(Predicate.isString);
 
-/** Why `origin` did not answer as T3 Code, short enough for a toast. Never echoes a body. */
+/** Why `origin` did not answer as Fhara, short enough for a toast. Never echoes a body. */
 const probeFailure = (
   origin: string,
   error: HttpClientError.HttpClientError | Schema.SchemaError | Cause.TimeoutError,
@@ -250,7 +250,7 @@ const make = Effect.gen(function* () {
       Effect.provideService(HttpClient.HttpClient, peerHttpClient),
     );
 
-  /** The environment answering at `origin`, or why nothing there answers as T3 Code. */
+  /** The environment answering at `origin`, or why nothing there answers as Fhara. */
   const probe = (origin: string) => {
     const timeout = probeTimeout(origin);
     return clientFor(origin).pipe(

@@ -19,17 +19,11 @@ import * as Schema from "effect/Schema";
 import * as SynchronizedRef from "effect/SynchronizedRef";
 
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
-import {
-  DEFAULT_LINUX_PASSWORD_STORE,
-  normalizeLinuxPasswordStorePreference,
-  type LinuxPasswordStorePreference,
-} from "../linuxSecretStorage.ts";
 import { desktopUpdateChannelOf } from "@t3tools/shared/cliRelease";
 import { isValidDistroName } from "../wsl/wslPathParsing.ts";
 
 export interface DesktopSettings {
   readonly localEnvironmentEnabled: boolean;
-  readonly linuxPasswordStore: LinuxPasswordStorePreference;
   readonly mainWindowBounds: DesktopWindowBounds | null;
   readonly mainWindowMaximized: boolean;
   readonly serverExposureMode: DesktopServerExposureMode;
@@ -49,9 +43,8 @@ export interface DesktopSettingsChange {
 }
 
 const DEFAULT_TAILSCALE_SERVE_PORT = 443;
-// Fits half and third tiles of common scaled displays (down to 480x432 DIP) on
-// Wayland, where Electron's client-side frame adds 32x42 DIP to the enforced
-// minimum. The web layout already handles phone widths.
+// Fits half and third tiles of common scaled displays (down to 480x432 DIP),
+// where the default minimum window would not. The web layout already handles phone widths.
 export const MIN_MAIN_WINDOW_SIZE = {
   width: 400,
   height: 360,
@@ -70,7 +63,6 @@ export const DEFAULT_MAIN_WINDOW_SIZE = {
 
 export const DEFAULT_DESKTOP_SETTINGS: DesktopSettings = {
   localEnvironmentEnabled: true,
-  linuxPasswordStore: DEFAULT_LINUX_PASSWORD_STORE,
   mainWindowBounds: null,
   mainWindowMaximized: false,
   serverExposureMode: "local-only",
@@ -92,7 +84,6 @@ const DesktopWindowBoundsDocument = Schema.Struct({
 
 const DesktopSettingsDocument = Schema.Struct({
   localEnvironmentEnabled: Schema.optionalKey(Schema.Boolean),
-  linuxPasswordStore: Schema.optionalKey(Schema.Unknown),
   mainWindowBounds: Schema.optionalKey(Schema.NullOr(DesktopWindowBoundsDocument)),
   mainWindowMaximized: Schema.optionalKey(Schema.Boolean),
   serverExposureMode: Schema.optionalKey(DesktopServerExposureModeSchema),
@@ -221,7 +212,6 @@ function normalizeDesktopSettingsDocument(
 
   return {
     localEnvironmentEnabled: parsed.localEnvironmentEnabled !== false,
-    linuxPasswordStore: normalizeLinuxPasswordStorePreference(parsed.linuxPasswordStore),
     mainWindowBounds,
     mainWindowMaximized: mainWindowBounds !== null && parsed.mainWindowMaximized === true,
     serverExposureMode:
@@ -248,9 +238,6 @@ function toDesktopSettingsDocument(
     document.localEnvironmentEnabled = settings.localEnvironmentEnabled;
   }
 
-  if (settings.linuxPasswordStore !== defaults.linuxPasswordStore) {
-    document.linuxPasswordStore = settings.linuxPasswordStore;
-  }
   if (settings.mainWindowBounds !== null) {
     document.mainWindowBounds = settings.mainWindowBounds;
   }

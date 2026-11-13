@@ -53,7 +53,7 @@ const FHARA_SELF_UPDATE_DISABLED: boolean = true;
 const PREFLIGHT_TIMEOUT = Duration.minutes(3);
 
 /**
- * Fhara never updates itself from upstream T3 Code releases: a remote update would replace
+ * Fhara never updates itself from upstream Fhara releases: a remote update would replace
  * the fork with the upstream `t3` build. Update by pulling the fork and restarting instead.
  */
 export const FHARA_SELF_UPDATE_DISABLED_REASON =
@@ -95,7 +95,7 @@ export const pruneRuntimesOnStart = Effect.fn("cloud.server_self_update.prune_on
     const platform = yield* HostProcess.Platform;
     const executablePath = yield* HostProcess.ExecutablePath;
     const { entryPath } = pinnedRuntimePaths(path, input.baseDir, packageJson.version, platform);
-    // The executable path is resolved, so it names the real path of a symlinked T3 home.
+    // The executable path is resolved, so it names the real path of a symlinked Fhara home.
     const realEntryPath = yield* fs.realPath(entryPath).pipe(Effect.orElseSucceed(() => entryPath));
     if (!input.managed && executablePath !== entryPath && executablePath !== realEntryPath) {
       return [];
@@ -107,7 +107,7 @@ export const pruneRuntimesOnStart = Effect.fn("cloud.server_self_update.prune_on
         ? Option.none<string>()
         : yield* fs.readFileString(unitPath).pipe(Effect.option);
     const program = Option.flatMapNullishOr(unit, bootServiceProgramOf);
-    // The unit may name it through another spelling of a symlinked T3 home.
+    // The unit may name it through another spelling of a symlinked Fhara home.
     const references = Option.isNone(program)
       ? []
       : [

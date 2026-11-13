@@ -345,7 +345,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   const policy = yield* ManagedPolicy.ManagedPolicy;
   const mirror = managedUpdateMirror(policy.document);
 
-  // Fhara: `t3 update` would install the upstream T3 Code release over the fork, unless a
+  // Fhara: `t3 update` would install the upstream Fhara release over the fork, unless a
   // Fhara release mirror is configured.
   if (!mirror?.feedUrl && !environment[CLI_RELEASE_BASE_URL_ENV]?.trim()) {
     return yield* new CliUpdateError({
@@ -461,7 +461,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
   let restartService = false;
   if (serviceInstalled && !serviceCurrent) {
     yield* Console.log(
-      "  A background service is installed for this T3 home. Restarting it interrupts anything running in it: agent turns, terminals, remote clients.",
+      "  A background service is installed for this Fhara home. Restarting it interrupts anything running in it: agent turns, terminals, remote clients.",
     );
     if (input.assumeYes) {
       restartService = true;
@@ -602,7 +602,7 @@ export const runUpdate = Effect.fn("cli.update.run")(function* (input: {
     );
   } else if (status.installed && !servesThisHome) {
     yield* Console.log(
-      `  The background service serves ${status.installedBaseDir ?? "another T3 home"} and was left unchanged.`,
+      `  The background service serves ${status.installedBaseDir ?? "another Fhara home"} and was left unchanged.`,
     );
   }
   if (foreground !== undefined) {

@@ -761,7 +761,7 @@ it.effect("linking a picked machine that answers nowhere names it and links noth
   ).pipe(Effect.provide(NodeHttpServer.layerTest)),
 );
 
-it.live("linking an address with nothing listening says so, unlike one that is not T3 Code", () =>
+it.live("linking an address with nothing listening says so, unlike one that is not Fhara", () =>
   Effect.scoped(
     Effect.gen(function* () {
       const closed = yield* Effect.scoped(

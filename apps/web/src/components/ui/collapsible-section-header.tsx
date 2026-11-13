@@ -3,7 +3,10 @@ import { ChevronDownIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const tones = {
-  muted: { label: "text-sidebar-muted-foreground", line: "bg-sidebar-border/50" },
+  muted: {
+    label: "text-2xs font-semibold uppercase tracking-[0.09em] text-sidebar-muted-foreground",
+    line: "bg-sidebar-border/50",
+  },
   emphasized: { label: "text-sidebar-foreground/80", line: "bg-sidebar-foreground/25" },
   accent: { label: "text-primary", line: "bg-primary/50" },
 } as const;

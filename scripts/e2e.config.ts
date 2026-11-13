@@ -24,7 +24,7 @@ const resolved = await Effect.gen(function* () {
 }).pipe(Effect.provide(NodeServices.layer), Effect.runPromise);
 
 export const APP_DIR = resolved.appDir;
-/** T3 homes only scenarios use, recreated on every run. `.t3` is gitignored. */
+/** Fhara homes only scenarios use, recreated on every run. `.t3` is gitignored. */
 export const T3_HOME = resolved.home;
 const startApp = resolved.startApp;
 /**

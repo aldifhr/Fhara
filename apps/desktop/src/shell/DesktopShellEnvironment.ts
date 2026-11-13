@@ -88,8 +88,6 @@ export class DesktopShellEnvironment extends Context.Service<
 
 const LOGIN_SHELL_ENV_NAMES = [
   "PATH",
-  "DBUS_SESSION_BUS_ADDRESS",
-  "DISPLAY",
   "LANG",
   "LC_ALL",
   "LC_CTYPE",
@@ -97,13 +95,6 @@ const LOGIN_SHELL_ENV_NAMES = [
   "HOMEBREW_PREFIX",
   "HOMEBREW_CELLAR",
   "HOMEBREW_REPOSITORY",
-  "XDG_CONFIG_HOME",
-  "XDG_CURRENT_DESKTOP",
-  "XDG_DATA_HOME",
-  "XDG_RUNTIME_DIR",
-  "XDG_SESSION_DESKTOP",
-  "XDG_SESSION_TYPE",
-  "WAYLAND_DISPLAY",
   "SSL_CERT_FILE",
   "SSL_CERT_DIR",
   "NODE_EXTRA_CA_CERTS",
@@ -132,23 +123,6 @@ const pathDelimiter = (platform: NodeJS.Platform) => (platform === "win32" ? ";"
 
 const readEnvPath = (env: NodeJS.ProcessEnv): Option.Option<string> =>
   trimNonEmpty(env.PATH ?? env.Path ?? env.path);
-
-const normalizeRuntimeDir = (value: string): string => value.replace(/\/+$/u, "");
-
-const linuxRuntimeDirCandidates = (
-  env: NodeJS.ProcessEnv,
-  uid: number | undefined,
-): ReadonlyArray<string> => {
-  const candidates: string[] = [];
-  const fromEnv = trimNonEmpty(env.XDG_RUNTIME_DIR);
-  if (Option.isSome(fromEnv)) {
-    candidates.push(normalizeRuntimeDir(fromEnv.value));
-  }
-  if (uid !== undefined) {
-    candidates.push(`/run/user/${uid}`);
-  }
-  return candidates.filter((candidate) => candidate.length > 0);
-};
 
 const pathComparisonKey = (entry: string, platform: NodeJS.Platform) => {
   const normalized = entry.trim().replace(/^"+|"+$/g, "");
@@ -493,10 +467,6 @@ const installPosixEnvironment = Effect.fn("desktop.shellEnvironment.installPosix
     }
 
     const shellPreferredEnvNames = [
-      "DBUS_SESSION_BUS_ADDRESS",
-      "XDG_CURRENT_DESKTOP",
-      "XDG_SESSION_DESKTOP",
-      "XDG_SESSION_TYPE",
       // Forward mise's PATH delta too, or mise x can rebuild PATH into a recursive same-named wrapper.
       "__MISE_DIFF",
     ] as const;
@@ -507,14 +477,9 @@ const installPosixEnvironment = Effect.fn("desktop.shellEnvironment.installPosix
     }
 
     for (const name of [
-      "DISPLAY",
       "HOMEBREW_PREFIX",
       "HOMEBREW_CELLAR",
       "HOMEBREW_REPOSITORY",
-      "XDG_CONFIG_HOME",
-      "XDG_DATA_HOME",
-      "XDG_RUNTIME_DIR",
-      "WAYLAND_DISPLAY",
       // Shell CA settings are required by Node/OpenSSL builds without bundled roots for registry TLS.
       "SSL_CERT_FILE",
       "SSL_CERT_DIR",
@@ -546,22 +511,6 @@ const installPosixEnvironment = Effect.fn("desktop.shellEnvironment.installPosix
       }
     }
 
-    if (
-      config.platform === "linux" &&
-      Option.isNone(trimNonEmpty(config.env.DBUS_SESSION_BUS_ADDRESS))
-    ) {
-      for (const runtimeDir of linuxRuntimeDirCandidates(config.env, process.getuid?.())) {
-        const dbusSessionBusPath = `${runtimeDir}/bus`;
-        const busExists = yield* fileSystem
-          .exists(dbusSessionBusPath)
-          .pipe(Effect.orElseSucceed(() => false));
-        if (busExists) {
-          config.env.DBUS_SESSION_BUS_ADDRESS = `unix:path=${dbusSessionBusPath}`;
-          break;
-        }
-      }
-    }
-
     const prepared = Option.isSome(trimNonEmpty(shellEnvironment.PATH));
     return { prepared, fromUserShell: prepared && userShells.includes(answeredBy) };
   },
@@ -585,7 +534,7 @@ const installShellEnvironment = (
       Effect.map((prepared) => ({ prepared, fromUserShell: prepared })),
     );
   }
-  if (config.platform === "darwin" || config.platform === "linux") {
+  if (config.platform === "darwin") {
     return installPosixEnvironment(config);
   }
   return Effect.succeed({ prepared: false, fromUserShell: false });

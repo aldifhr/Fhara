@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off
 /**
- * Replays small fake threads on a Claude or Codex model to check T3's MCP tool use. A trimmed
+ * Replays small fake threads on a Claude or Codex model to check Fhara's MCP tool use. A trimmed
  * harness capture supplies the prompt and native tools; a cheap model plays the shell. See
  * README.md for how to run it and add cases.
  */
@@ -156,11 +156,11 @@ export type SampleRun = {
   stopReason: string;
   /** The agent's final answer: its last response's text, if it ended its turn. */
   readonly finalText?: string;
-  /** PRs linked to the thread when the sample ends, by the agent or by T3. */
+  /** PRs linked to the thread when the sample ends, by the agent or by Fhara. */
   readonly linked?: ReadonlyArray<string>;
   /** The thread's working directory, which chat resolves relative file pills against. */
   readonly cwd?: string;
-  /** The `agent-device` commands T3's device_open returned, prior turns included. */
+  /** The `agent-device` commands Fhara's device_open returned, prior turns included. */
   readonly launchers?: ReadonlyArray<string>;
 };
 
@@ -171,7 +171,7 @@ const PriorToolCall = Schema.Struct({
   input: Schema.Unknown,
   /**
    * For a device tool or t3_background_wait, `"default"` runs the call on the world's devices or
-   * background tasks for T3's result.
+   * background tasks for Fhara's result.
    */
   result: Schema.Unknown,
   /** Repository-relative file whose current contents supply this tool result. */
@@ -252,7 +252,7 @@ const McpToolUseWorld = Schema.StructWithRest(
         Schema.StructWithRest(Schema.Struct({ sha: Schema.String, subject: Schema.String }), Rest),
       ),
     ),
-    /** Simulators and emulators. With them, T3's device tools answer from this world. */
+    /** Simulators and emulators. With them, Fhara's device tools answer from this world. */
     devices: Schema.optional(Schema.Array(DeviceSummary)),
     /** Labels of the SSH device hosts in `devices`, by id. The local host always exists. */
     deviceHosts: Schema.optional(Schema.Record(Schema.String, Schema.String)),
@@ -266,23 +266,23 @@ const McpToolUseWorld = Schema.StructWithRest(
     /**
      * Hosts whose hub fails to list devices, by id, with the error, such as F1's
      * `{"_tag": "DeviceOperationError", "operation": "list", "reason": "request_failed", "cause": null}`.
-     * T3 marks each one failed on every call and lists none of its devices.
+     * Fhara marks each one failed on every call and lists none of its devices.
      */
     deviceDiscoveryFailures: Schema.optional(Schema.Record(Schema.String, DeviceOperationError)),
-    /** false: agent device access is off. T3 denies every device call and drops its device text. */
+    /** false: agent device access is off. Fhara denies every device call and drops its device text. */
     deviceAgentAccess: Schema.optional(Schema.Boolean),
-    /** false: agent browser access is off. T3 denies every preview call and drops its browser text. */
+    /** false: agent browser access is off. Fhara denies every preview call and drops its browser text. */
     browserAgentAccess: Schema.optional(Schema.Boolean),
-    /** Every capture reaches T3 with adb screencap's warning ahead of the PNG: T3 reports 0×0. */
+    /** Every capture reaches Fhara with adb screencap's warning ahead of the PNG: Fhara reports 0×0. */
     deviceInvalidCapture: Schema.optional(Schema.Boolean),
     /** Devices another thread's agent-device session holds, by device id: that thread's id. */
     deviceOwners: Schema.optional(Schema.Record(Schema.String, Schema.String)),
     /**
      * Task IDs of the background commands and Monitors still running on the agent's Claude
-     * session. With them, T3's own t3_background_wait handler answers from this world.
+     * session. With them, Fhara's own t3_background_wait handler answers from this world.
      */
     backgroundTasks: Schema.optional(Schema.Array(Schema.String)),
-    /** PRs already linked to the thread, with the state T3 last saw. */
+    /** PRs already linked to the thread, with the state Fhara last saw. */
     linkedPullRequests: Schema.optional(
       Schema.Array(
         Schema.Struct({ number: Schema.Number, state: PullRequestState, title: Schema.String }),
@@ -305,9 +305,9 @@ export const McpToolUseCase = Schema.Struct({
     role: Schema.Literals(["top", "delegated-child", "native-subagent"]),
     /** Runs only on this harness, for cases whose right answer depends on it. */
     harness: Schema.optional(Schema.Literals(["claude", "codex"])),
-    /** The Linked environments beta is on, so T3 lists its link tools. */
+    /** The Linked environments beta is on, so Fhara lists its link tools. */
     linkedEnvironments: Schema.optional(Schema.Boolean),
-    /** delegate_task `role` for a delegated child. T3 builds the child's first message from it. */
+    /** delegate_task `role` for a delegated child. Fhara builds the child's first message from it. */
     delegateRole: Schema.optional(OrchestratorMcpTaskRole),
     context: Schema.optional(Schema.String),
     priorTurns: Schema.optional(
@@ -321,8 +321,8 @@ export const McpToolUseCase = Schema.Struct({
     ),
     world: Schema.optional(McpToolUseWorld),
     /**
-     * Canned tool results by bare name, T3 or native. `"default"` uses the runner's result. For a
-     * device tool, a T3 `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside T3; for a
+     * Canned tool results by bare name, Fhara or native. `"default"` uses the runner's result. For a
+     * device tool, a Fhara `DeviceError` (`{"_tag": ..., "cause": null}`) fails it inside Fhara; for a
      * preview tool, a `PreviewAutomationError` fails it with that error's message. A
      * `{"$sequence": [...]}` mock answers its nth call with the nth result, then repeats the last.
      */
@@ -331,14 +331,14 @@ export const McpToolUseCase = Schema.Struct({
     shellMocks: Schema.optional(
       Schema.Array(Schema.Struct({ match: Schema.String, output: Schema.String })),
     ),
-    /** The thread is a side chat's first turn: T3 puts the parent's digest ahead of `prompt`. */
+    /** The thread is a side chat's first turn: Fhara puts the parent's digest ahead of `prompt`. */
     sideChat: Schema.optional(
       Schema.Struct({ parentThreadId: Schema.String, digest: Schema.Array(Schema.String) }),
     ),
   }),
   /** Empty to resume a top-level thread without side-chat context after its last tool result. */
   prompt: Schema.String,
-  /** Records for the context chips `prompt` links, projected as T3 sends them. */
+  /** Records for the context chips `prompt` links, projected as Fhara sends them. */
   promptContext: Schema.optional(Schema.Struct({ records: Schema.Array(ComposerContextRecord) })),
   expect: McpToolUseExpect,
   /** Model calls this case may need. Overrides `--max-steps`. */
@@ -414,7 +414,7 @@ const isT3Name = (name: string) => name.startsWith(T3_PREFIX) || name.startsWith
 const hasTool = (tools: ReadonlyArray<ApiTool>, name: string) =>
   tools.some((tool) => tool.name === name);
 
-/** Grading name: T3 tools lose their MCP prefix, native tools keep the part after the last `_`. */
+/** Grading name: Fhara tools lose their MCP prefix, native tools keep the part after the last `_`. */
 const CODEX_NAMES: Readonly<Record<string, string>> = {
   exec_command: "Bash",
   shell_command: "Bash",
@@ -471,7 +471,7 @@ const t3Tools: ReadonlyArray<ApiTool> = t3SourceTools.map((tool) => ({
   description: Tool.getDescription(tool) ?? "",
   input_schema: advertisedJsonSchema(tool),
 }));
-// T3 gates these on the `preview` capability, which agent browser access decides.
+// Fhara gates these on the `preview` capability, which agent browser access decides.
 const PREVIEW_TOOLS = new Set(
   [PreviewToolkit, PreviewControlsToolkit].flatMap((toolkit) =>
     Object.values(toolkit.tools).map((tool: Tool.Any) => tool.name),
@@ -504,12 +504,12 @@ export const savesPastedSecrets = t3Tools.some(
     isRecord(tool.input_schema.properties) &&
     "value" in tool.input_schema.properties,
 );
-/** A request_secret call that hands T3 a pasted secret, on a ref that takes one. */
+/** A request_secret call that hands Fhara a pasted secret, on a ref that takes one. */
 const pastedSecret = (name: string, input: Readonly<Record<string, unknown>>) =>
   savesPastedSecrets && name === "request_secret" && typeof input.value === "string";
-// T3 does not offer these to a delegated child, so its harness never lists them.
+// Fhara does not offer these to a delegated child, so its harness never lists them.
 const hiddenFromSubagents = enabledWhen(McpInvocationContext.hiddenFromSubagents);
-// The Linked environments beta starts off, and T3 lists its tools only while it is on.
+// The Linked environments beta starts off, and Fhara lists its tools only while it is on.
 const hiddenWhileLinksOff = enabledWhen(McpInvocationContext.hiddenWhileLinksOff);
 const visibleT3Tools = (options: { readonly subagent?: boolean; readonly links?: boolean }) =>
   t3Tools.filter(
@@ -519,7 +519,7 @@ const visibleT3Tools = (options: { readonly subagent?: boolean; readonly links?:
   );
 
 /**
- * T3's Claude Code options for an eval thread: its system prompt append and its hooks. `device` and
+ * Fhara's Claude Code options for an eval thread: its system prompt append and its hooks. `device` and
  * `browser` say whether the thread holds the `device` and `preview` capabilities, as agent device
  * and browser access decide.
  */
@@ -540,18 +540,18 @@ const claudeQueryOptions = (model: Model, device = true, browser = true) => {
   return makeClaudeQueryOptions(input);
 };
 
-/** Text T3 appends to Claude Code's system prompt. Delegated children get the same text. */
+/** Text Fhara appends to Claude Code's system prompt. Delegated children get the same text. */
 export const t3SystemAppend = (model: Model, device = true, browser = true) => {
   const { systemPrompt } = claudeQueryOptions(model, device, browser);
   if (isRecord(systemPrompt) && systemPrompt.type === "preset" && systemPrompt.append) {
     return systemPrompt.append;
   }
-  throw new Error("makeClaudeQueryOptions no longer appends T3 text to a preset prompt.");
+  throw new Error("makeClaudeQueryOptions no longer appends Fhara text to a preset prompt.");
 };
 
 /**
- * The context T3's SubagentStart hooks give a native subagent, which gets none of the append.
- * Empty when T3 registers no such hook.
+ * The context Fhara's SubagentStart hooks give a native subagent, which gets none of the append.
+ * Empty when Fhara registers no such hook.
  */
 export const t3SubagentContext = async (model: Model, device = true, browser = true) => {
   const hooks = (claudeQueryOptions(model, device, browser).hooks?.SubagentStart ?? []).flatMap(
@@ -579,7 +579,7 @@ export const t3SubagentContext = async (model: Model, device = true, browser = t
 };
 
 /**
- * Size of the context T3 adds: the system text every Claude thread gets, and the tool
+ * Size of the context Fhara adds: the system text every Claude thread gets, and the tool
  * descriptions and schemas (loaded on demand here, sent up front by harnesses without
  * deferred tools). Tokens are estimated at 4 characters each.
  */
@@ -588,7 +588,7 @@ const t3ContextReport = (model: Model) => {
   const descriptions = t3Tools.reduce((sum, tool) => sum + valueText(tool.description).length, 0);
   const schemas = JSON.stringify(t3Tools).length;
   return [
-    `- T3 context: system text ${size((isCodex(model) ? JSON.stringify(buildCodexAdditionalContext({ model }, { browser: true, device: true })) : t3SystemAppend(model)).length)}`,
+    `- Fhara context: system text ${size((isCodex(model) ? JSON.stringify(buildCodexAdditionalContext({ model }, { browser: true, device: true })) : t3SystemAppend(model)).length)}`,
     `tool descriptions ${size(descriptions)}`,
     `full tool schemas ${size(schemas)} across ${t3Tools.length} tools.`,
   ].join(", ");
@@ -625,11 +625,11 @@ export const buildBase = (
     readonly keepUserInstructions: boolean;
     readonly subagent?: boolean;
     readonly links?: boolean;
-    /** A native subagent starts from its task: T3 appends nothing to its system prompt. */
+    /** A native subagent starts from its task: Fhara appends nothing to its system prompt. */
     readonly nativeSubagent?: boolean;
-    /** false: the thread has no agent device access, so T3's text leaves devices out. */
+    /** false: the thread has no agent device access, so Fhara's text leaves devices out. */
     readonly deviceAccess?: boolean;
-    /** false: the thread has no agent browser access, so T3's text leaves the browser out. */
+    /** false: the thread has no agent browser access, so Fhara's text leaves the browser out. */
     readonly browserAccess?: boolean;
   },
 ) => {
@@ -665,7 +665,7 @@ export const buildBase = (
   const anonymize = (value: string) =>
     home === undefined ? value : value.replaceAll(home, home.replace(/[^/]+$/, "user"));
   const system = systemTexts.map((value) => {
-    // T3's append is the tail of its block: runtime info, PR linking, then orchestration.
+    // Fhara's append is the tail of its block: runtime info, PR linking, then orchestration.
     const at = value.indexOf(RUNTIME_MARKER);
     return anonymize(at === -1 ? value : value.slice(0, at) + append)
       .replace(DEFERRED_LIST, (_, header: string) => `${header}${names}\n`)
@@ -700,7 +700,7 @@ export const buildBase = (
       ...template.tools.filter((tool) => !isT3Name(tool.name)),
       ...t3.filter((tool) => alwaysLoaded.has(tool.name)),
     ],
-    /** Tools ToolSearch loads: T3 tools from source, and native tools the template only names. */
+    /** Tools ToolSearch loads: Fhara tools from source, and native tools the template only names. */
     t3,
     deferred: [...t3, ...nativeDeferred.map((name) => ({ name, ...nativeSchema(name) }))],
   };
@@ -708,7 +708,7 @@ export const buildBase = (
 
 type Base = ReturnType<typeof buildBase> & {
   readonly codex?: typeof ResponsesRequest.Type;
-  /** What T3's SubagentStart hooks give a native subagent. */
+  /** What Fhara's SubagentStart hooks give a native subagent. */
   readonly subagentContext?: string;
 };
 
@@ -721,9 +721,9 @@ const buildCodexBase = (
     readonly effort?: string | undefined;
     readonly subagent?: boolean;
     readonly links?: boolean;
-    /** false: the thread has no agent device access, so T3's text leaves devices out. */
+    /** false: the thread has no agent device access, so Fhara's text leaves devices out. */
     readonly deviceAccess?: boolean;
-    /** false: the thread has no agent browser access, so T3's text leaves the browser out. */
+    /** false: the thread has no agent browser access, so Fhara's text leaves the browser out. */
     readonly browserAccess?: boolean;
   },
 ): Base => {
@@ -734,7 +734,7 @@ const buildCodexBase = (
       : valueText(item.content);
   const joined = template.input.map(contentText).join("\n");
   if (!joined.includes("<t3_code_runtime>"))
-    throw new Error("Codex template needs full T3 context.");
+    throw new Error("Codex template needs full Fhara context.");
   const cwd = /<cwd>(.*?)<\/cwd>/.exec(joined)?.[1] ?? "/home/user/app";
   const home = /^\/(?:home|Users)\/[^/]+/.exec(cwd)?.[0];
   const clean = (s: string) => (home ? s.replaceAll(home, home.replace(/[^/]+$/, "user")) : s);
@@ -840,7 +840,7 @@ const codexMessages = (messages: ReadonlyArray<ApiMessage>): Array<Block> =>
   );
 /** One tool call the shell simulator has answered, or one from the case's prior turns. */
 type ShellEntry = { readonly tool: string; readonly input: unknown; readonly output: string };
-/** PRs T3 links by itself because a shell command created them, as `gh pr create` does. */
+/** PRs Fhara links by itself because a shell command created them, as `gh pr create` does. */
 const createdPullRequests = ({ tool, input, output }: ShellEntry) =>
   tool === "Bash" && isRecord(input) && typeof input.command === "string"
     ? changeRequestsCreatedBy(input.command, output).map(({ url }) => url)
@@ -848,7 +848,7 @@ const createdPullRequests = ({ tool, input, output }: ShellEntry) =>
 /**
  * One sample's state. ToolSearch adds loaded schemas to `tools`, like Claude Code. `shell` is the
  * history the simulator keeps consistent with; `linked`, `nextTask` and `threads` do the same for
- * T3 results.
+ * Fhara results.
  */
 type Sample = {
   readonly testCase: McpToolUseCase;
@@ -862,16 +862,16 @@ type Sample = {
   nextTask: number;
   /** Threads the agent launched in this sample, by id, so reading one shows its own brief. */
   readonly threads: Map<string, { readonly title: string; readonly brief: string }>;
-  /** Files T3's request_secret saved in this sample, in call order. */
+  /** Files Fhara's request_secret saved in this sample, in call order. */
   readonly secretFiles: Array<string>;
   secretRequests: number;
-  /** T3's device tools, once `withDevices` builds them for a world with devices. */
+  /** Fhara's device tools, once `withDevices` builds them for a world with devices. */
   devices?: DeviceTools;
-  /** T3's results for prior device calls whose case result is "default". */
+  /** Fhara's results for prior device calls whose case result is "default". */
   readonly priorResults: Map<unknown, string>;
-  /** Prior calls whose T3 result is an error, so the agent sees it as one. */
+  /** Prior calls whose Fhara result is an error, so the agent sees it as one. */
   readonly priorErrors: Set<unknown>;
-  /** T3's t3_background_wait, once `withBackgroundWait` builds it for `world.backgroundTasks`. */
+  /** Fhara's t3_background_wait, once `withBackgroundWait` builds it for `world.backgroundTasks`. */
   backgroundWait?: BackgroundWait;
   /** Calls so far per mocked tool, for mocks that answer in sequence. */
   readonly mockCalls: Map<string, number>;
@@ -933,8 +933,8 @@ const nextMock = (sample: Sample, name: string, mock: unknown) => {
 };
 
 /**
- * Builds T3's device tools for a world with devices. Prior device calls whose result is "default"
- * run first, in order and without the case's mocks, so their results and sessions are T3's. As in
+ * Builds Fhara's device tools for a world with devices. Prior device calls whose result is "default"
+ * run first, in order and without the case's mocks, so their results and sessions are Fhara's. As in
  * the real flow, device_open starts no agent-device session: one starts at a launcher `open` in the
  * sample's shell history, prior turns included, or where `world.agentDeviceSessions` declares it.
  */
@@ -952,8 +952,8 @@ export const withDevices = Effect.fn("evaluateMcpToolUse.withDevices")(function*
 });
 
 /**
- * Builds T3's t3_background_wait for a world with background tasks, and answers prior waits whose
- * result is "default" with T3's result.
+ * Builds Fhara's t3_background_wait for a world with background tasks, and answers prior waits whose
+ * result is "default" with Fhara's result.
  */
 export const withBackgroundWait = Effect.fn("evaluateMcpToolUse.withBackgroundWait")(function* (
   sample: Sample,
@@ -1063,11 +1063,11 @@ export const buildMessages = (sample: Sample) => {
           ? "withBackgroundWait"
           : undefined;
       if (call.result === "default" && builder && !sample.priorResults.has(call)) {
-        throw new Error(`${testCase.id}: prior ${call.tool} needs T3's result; run ${builder}.`);
+        throw new Error(`${testCase.id}: prior ${call.tool} needs Fhara's result; run ${builder}.`);
       }
       return { ...call, id: `toolu_prior_${nextId++}`, name: tool.name, tool, prior: call };
     });
-    // Prior T3 calls load their schemas first, as in a real deferred session.
+    // Prior Fhara calls load their schemas first, as in a real deferred session.
     const unloaded = [...new Set(calls.map((call) => call.tool))].filter(
       (tool) => !hasTool(tools, tool.name),
     );
@@ -1106,7 +1106,7 @@ export const buildMessages = (sample: Sample) => {
   return messages;
 };
 
-// Results for T3 tools a case does not mock. The model ids are public in this repo's catalog.
+// Results for Fhara tools a case does not mock. The model ids are public in this repo's catalog.
 const claudeModel = (id: string) => ({ id, options: [{ id: "effort", values: EFFORTS }] });
 const codexModel = (id: string) => ({ id, options: [{ id: "reasoningEffort", values: EFFORTS }] });
 // Mirrors the real catalog's main models, so a case's named model is not missing by accident.
@@ -1146,7 +1146,7 @@ const HTML_RENDERED =
 
 const PULL_REQUEST_URL = /\/pull\/\d+\/?$/;
 
-/** Pull request identity from a `url` or `repository` plus `number` input, like T3's results. */
+/** Pull request identity from a `url` or `repository` plus `number` input, like Fhara's results. */
 const pullRequest = (repo: string, input: Readonly<Record<string, unknown>>) => {
   const url = typeof input.url === "string" ? input.url : "";
   const repository =
@@ -1169,7 +1169,7 @@ const linkedEntry = (sample: Sample, url: string) => {
   return { ...pr, state: seeded?.state ?? "open", title: seeded?.title ?? null };
 };
 
-/** A believable T3 result for a tool the case does not mock. */
+/** A believable Fhara result for a tool the case does not mock. */
 export const t3Default = (
   sample: Sample,
   name: string,
@@ -1266,7 +1266,7 @@ export const t3Default = (
       };
     }
     case "request_secret": {
-      // T3 names a ref and a file with 32 hex characters, new for each request, in its secrets dir.
+      // Fhara names a ref and a file with 32 hex characters, new for each request, in its secrets dir.
       const id = NodeCrypto.createHash("sha256")
         .update(`${sample.testCase.id}:${sample.secretRequests++}`)
         .digest("hex")
@@ -1354,13 +1354,13 @@ export const t3Default = (
 /** The machine the fake threads live on. */
 const EVAL_ENVIRONMENT_ID = EnvironmentId.make("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
 
-// The note T3 adds when a secret card ends unsaved, on refs that have one (looked up by name so
+// The note Fhara adds when a secret card ends unsaved, on refs that have one (looked up by name so
 // the runner still builds on refs without it).
 const unsavedSecretNote = (Contracts as Record<string, unknown>).SECRET_REQUEST_UNSAVED_NOTE as
   | Readonly<Record<string, string>>
   | undefined;
 
-/** Fields T3 adds to real thread and task results, applied to mocks and defaults alike. */
+/** Fields Fhara adds to real thread and task results, applied to mocks and defaults alike. */
 const withProductFields = (name: string, value: unknown, child: boolean): unknown => {
   if (!isRecord(value)) return value;
   const linked = (thread: unknown, idKey = "threadId") => {
@@ -1511,12 +1511,12 @@ export const shellRequest = (sample: Sample, call: Omit<ShellEntry, "output">, m
     ...(devices?.describe(shell, typeof command === "string" ? command : undefined) ?? []),
     ...(world?.deviceInvalidCapture
       ? [
-          "T3's device_screenshot gets each capture with adb screencap's multi-display warning ahead of the PNG, so it reports 0×0. agent-device's own screenshot finds the PNG and is unaffected.",
+          "Fhara's device_screenshot gets each capture with adb screencap's multi-display warning ahead of the PNG, so it reports 0×0. agent-device's own screenshot finds the PNG and is unaffected.",
         ]
       : []),
     ...(sample.secretFiles.length > 0
       ? [
-          `T3's request_secret saved these files in this sample: ${sample.secretFiles.join(", ")}. Each exists, is readable only by the user, and holds exactly the value the user gave, typed into T3's private card or pasted in chat and saved by the agent, the right one for the task, with no trailing newline. A program that reads it, as in "$(cat <file>)", < <file> or a --*-file flag, gets that value. What appears in the output is whatever that program prints: one that prints or logs its input shows the value. No other file in that directory exists.`,
+          `Fhara's request_secret saved these files in this sample: ${sample.secretFiles.join(", ")}. Each exists, is readable only by the user, and holds exactly the value the user gave, typed into Fhara's private card or pasted in chat and saved by the agent, the right one for the task, with no trailing newline. A program that reads it, as in "$(cat <file>)", < <file> or a --*-file flag, gets that value. What appears in the output is whatever that program prints: one that prints or logs its input shows the value. No other file in that directory exists.`,
         ]
       : []),
     ...(context ? [`The agent was told: ${context}`] : []),
@@ -1529,7 +1529,7 @@ export const shellRequest = (sample: Sample, call: Omit<ShellEntry, "output">, m
     max_tokens: 8_000,
     // The "facts" field keeps the simulator's reasoning out of the output the agent sees.
     output_config: { effort: "low", format: { type: "json_schema", schema: SHELL_REPLY_SCHEMA } },
-    // A case with devices also gets agent-device's own CLI, so T3's launchers answer as it does.
+    // A case with devices also gets agent-device's own CLI, so Fhara's launchers answer as it does.
     system: devices ? `${SHELL_PROMPT}\n\n${AGENT_DEVICE_SHELL}` : SHELL_PROMPT,
     messages: [
       {
@@ -1585,7 +1585,7 @@ type Config = {
 
 /**
  * Output for a command that needs no simulator: a matching shell mock, else, for a plain command
- * on a launcher T3 returned, agent-device's help or its error for a session not yet started.
+ * on a launcher Fhara returned, agent-device's help or its error for a session not yet started.
  */
 export const cannedOutput = (sample: Sample, command: string) =>
   mockOutput(sample, command) ??
@@ -1650,7 +1650,7 @@ export const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(fun
     if (found.length === 0) return toolResult(call.id, "No matching deferred tools found");
     return loadTools(tools, call.id, found);
   }
-  // T3 refuses a page call without exactly one source before any mocked result.
+  // Fhara refuses a page call without exactly one source before any mocked result.
   const sources = [input.html, input.path].filter(
     (source) => source !== undefined && source !== null,
   );
@@ -1672,7 +1672,7 @@ export const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(fun
     const previewError = previewFailure(mock);
     if (previewError !== undefined) return failed(previewError.message);
   }
-  // T3 answers device calls from the world. A mock that is a T3 device error fails inside T3.
+  // Fhara answers device calls from the world. A mock that is a Fhara device error fails inside Fhara.
   const failure = deviceFailure(mock);
   const fromWorld = mock === undefined || mock === "default" || failure !== undefined;
   if (sample.devices && isT3Name(call.name) && isDeviceTool(name) && fromWorld) {
@@ -1694,7 +1694,7 @@ export const answerToolCall = Effect.fn("evaluateMcpToolUse.answerToolCall")(fun
     );
   }
   if (isT3Name(call.name)) {
-    // T3 refuses a watch from a delegated child.
+    // Fhara refuses a watch from a delegated child.
     if (name === "watch_pull_request" && testCase.setup.role === "delegated-child") {
       return failed(SUBAGENT_WATCH_ERROR);
     }
@@ -1950,7 +1950,7 @@ const SETTLED =
 export const failedEarly = (expect: McpToolUseCase["expect"], run: SampleRun, pasted = "") =>
   gradeSample(
     expect,
-    // A page call T3 has not answered yet may still be refused, so it is graded once it settles.
+    // A page call Fhara has not answered yet may still be refused, so it is graded once it settles.
     {
       ...run,
       calls: run.calls.filter((call) => !isPageTool(call.tool) || call.failed !== undefined),
@@ -2387,7 +2387,7 @@ export const summarize = (
   );
   const errorNote = `- Errored: ${errors.map(([id, failed]) => `${id} ×${failed.length}`).join(", ")}. These samples did not finish, even after retries, so pass rates leave them out; tokens they spent are counted.`;
   const nativeNote =
-    "- native-subagent cases are approximate: the harness gives subagents their own system prompt, which this runner does not rebuild. T3's append is left out and its SubagentStart hook context added after the task.";
+    "- native-subagent cases are approximate: the harness gives subagents their own system prompt, which this runner does not rebuild. Fhara's append is left out and its SubagentStart hook context added after the task.";
   const identityNote = `- The captured Claude Code identity line is replaced with "${NEUTRAL_IDENTITY}"`;
   const finished = rows.filter((row) => row.error === undefined).length;
   return [
@@ -2472,12 +2472,12 @@ const main = Effect.gen(function* () {
       "max-steps": string,
       effort: string,
       "shell-model": { ...string, default: "claude-haiku-5-5" },
-      // T3's text must work for every user, so the captured CLAUDE.md is dropped by default.
+      // Fhara's text must work for every user, so the captured CLAUDE.md is dropped by default.
       "user-instructions": { ...string, default: "drop" },
       "dry-run": { type: "boolean", default: false },
       "stop-on-regression": { type: "boolean", default: false },
       "regression-budget": string,
-      // Prints the size of T3's text and tool schemas, then exits. Needs no template or key.
+      // Prints the size of Fhara's text and tool schemas, then exits. Needs no template or key.
       context: { type: "boolean", default: false },
     },
   });

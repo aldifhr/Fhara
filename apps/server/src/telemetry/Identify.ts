@@ -48,7 +48,7 @@ const IdTokenClaims = Schema.Struct({
 const decodeIdTokenClaims = Schema.decodeUnknownOption(Schema.fromJsonString(IdTokenClaims));
 
 /**
- * Who an install belongs to, from strongest to weakest. `connect` is the T3
+ * Who an install belongs to, from strongest to weakest. `connect` is the Fhara
  * Connect account. `openai` and `claude` are provider accounts. `device` is a
  * client device that connected.
  */
@@ -176,7 +176,7 @@ const readIdentityFile = (
 
 /**
  * The OpenAI account id in a ChatGPT id_token, read without verifying it:
- * analytics needs only a stable id. Codex CLI and T3's own sign-in both use it.
+ * analytics needs only a stable id. Codex CLI and Fhara's own sign-in both use it.
  */
 export const openAiUserId = (idToken: string) => {
   const payload = Base64Url.decodeString(idToken.split(".")[1] ?? "");

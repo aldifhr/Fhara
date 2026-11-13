@@ -39,8 +39,8 @@ const semver = requireFromUpdater("semver") as { parse: (version: string) => Run
 
 const releaseTitle = (version: string) =>
   version.includes("-nightly.")
-    ? `T3 Code Nightly ${version} (0123456789ab)`
-    : `T3 Code v${version}`;
+    ? `Fhara Nightly ${version} (0123456789ab)`
+    : `Fhara v${version}`;
 
 const releaseFeed = (...versions: ReadonlyArray<string>) =>
   parseXml(

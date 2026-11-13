@@ -24,7 +24,7 @@ import {
 
 const exec = NodeUtil.promisify(NodeChildProcess.execFile);
 
-/** A loopback port that accepts connections until the scope closes, like T3's device connection. */
+/** A loopback port that accepts connections until the scope closes, like Fhara's device connection. */
 const listeningPort = Effect.acquireRelease(
   Effect.promise(
     () =>
@@ -46,7 +46,7 @@ describe("host-bound agent commands", () => {
         const temp = yield* fs.makeTempDirectoryScoped({ prefix: "t3-device-target-" });
         const dir = path.join(temp, "quotes '\" $HOME `literal`");
         yield* fs.makeDirectory(dir);
-        const desktopApp = path.join(dir, "T3 Code");
+        const desktopApp = path.join(dir, "Fhara");
         // Dropping Node mode after checking it forces each hop to set it independently.
         yield* fs.writeFileString(
           desktopApp,
@@ -275,7 +275,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
     expect(agentDeviceCloseOutcome(result(null, "", true))).toBe("timed-out");
   });
 
-  it.live("stops before agent-device when T3's device connection is down", () =>
+  it.live("stops before agent-device when Fhara's device connection is down", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -333,7 +333,7 @@ exec '${process.execPath.replaceAll("'", "'\"'\"'")}' "$@"
           "t3-a",
         ]);
       }
-      // cdp talks to Metro, not to T3's connection, so it still runs.
+      // cdp talks to Metro, not to Fhara's connection, so it still runs.
       expect(
         JSON.parse((yield* Effect.promise(() => launch(["cdp", "target", "list"]))).stdout),
       ).toEqual(["cdp", "target", "list"]);

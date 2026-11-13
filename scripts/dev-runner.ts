@@ -335,7 +335,7 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
     delete output.T3CODE_HOME;
   }
 
-  // Managed T3 service shells leak launcher variables that make dev servers fail version checks.
+  // Managed Fhara service shells leak launcher variables that make dev servers fail version checks.
   // Dev-runner servers are never launcher-managed (serviceLauncherClient.ts resolveStartup).
   delete output.T3_SERVICE_LAUNCHER_CONTEXT;
   delete output.T3_BOOT_SERVICE_UNIT;
@@ -377,7 +377,7 @@ export const createDevRunnerEnv = Effect.fn("dev-runner.createDevRunnerEnv")(fun
     delete output.T3CODE_DEV_AUTH_TOKEN;
   }
 
-  // Agent shells inherit the parent T3 server's bind settings; only --host widens the dev server.
+  // Agent shells inherit the parent Fhara server's bind settings; only --host widens the dev server.
   delete output.T3CODE_LAN;
   if (!isDesktopMode && host !== undefined) {
     output.T3CODE_HOST = host;
@@ -931,7 +931,7 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   t3Home: Flag.String("home-dir").pipe(
     Flag.withDescription(
-      "Explicit T3 Code data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
+      "Explicit Fhara data directory; runtime state is stored under userdata (equivalent to T3CODE_HOME). Inside a git worktree this defaults to that worktree's own .t3 so dev state stays off the shared home.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),
@@ -953,7 +953,7 @@ const devRunnerCli = Command.make("dev-runner", {
   ),
   host: Flag.String("host").pipe(
     Flag.withDescription(
-      "Server host/interface override (forwards to T3CODE_HOST). Ambient T3CODE_HOST is ignored: agent shells inherit it from the T3 server that spawned them.",
+      "Server host/interface override (forwards to T3CODE_HOST). Ambient T3CODE_HOST is ignored: agent shells inherit it from the Fhara server that spawned them.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),
@@ -961,7 +961,7 @@ const devRunnerCli = Command.make("dev-runner", {
   port: Flag.Int("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
     Flag.withDescription(
-      "Server port override (forwards to T3CODE_PORT). Ambient T3CODE_PORT is ignored: agent shells inherit it from the T3 server that spawned them.",
+      "Server port override (forwards to T3CODE_PORT). Ambient T3CODE_PORT is ignored: agent shells inherit it from the Fhara server that spawned them.",
     ),
     Flag.optional,
     Flag.map(Option.getOrUndefined),

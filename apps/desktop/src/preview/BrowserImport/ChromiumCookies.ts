@@ -142,7 +142,7 @@ export function decryptChromiumValue(
   keys: ChromiumKeyMaterial,
   domain: string,
   schemaVersion = 23,
-  platform: NodeJS.Platform = "linux",
+  platform: NodeJS.Platform = "darwin",
 ): string | null {
   const buffer = Buffer.from(encrypted);
   if (buffer.length === 0) return "";
@@ -156,22 +156,23 @@ export function decryptChromiumValue(
       : null;
   }
 
-  // Retry the empty-passphrase key used by some Linux clients (crbug.com/1195256).
+  // Retry the empty-passphrase key used by some clients (crbug.com/1195256).
+  const cbcEmptyFallback = keys.cbcV10 ? derive("", 1) : undefined;
   if (prefix === "v10") {
     if (!keys.cbcV10) return null;
     return (
       decryptCbc(payload, keys.cbcV10, domain, schemaVersion) ??
-      (keys.cbcEmpty ? decryptCbc(payload, keys.cbcEmpty, domain, schemaVersion) : null)
+      (cbcEmptyFallback ? decryptCbc(payload, cbcEmptyFallback, domain, schemaVersion) : null)
     );
   }
   if (prefix === "v11") {
     if (!keys.cbcV11) return null;
     return (
       decryptCbc(payload, keys.cbcV11, domain, schemaVersion) ??
-      (keys.cbcEmpty ? decryptCbc(payload, keys.cbcEmpty, domain, schemaVersion) : null)
+      (cbcEmptyFallback ? decryptCbc(payload, cbcEmptyFallback, domain, schemaVersion) : null)
     );
   }
-  if (platform === "darwin" || platform === "linux") {
+  if (platform === "darwin") {
     return stripDomainBinding(buffer, domain, schemaVersion)?.toString("utf8") ?? null;
   }
   return null;
@@ -257,7 +258,6 @@ export interface ChromiumCookieSource {
   readonly cookieDatabasePath: string;
   readonly keychainService: string | undefined;
   readonly keychainAccount: string | undefined;
-  readonly linuxSecretApplication: string | undefined;
   readonly windowsLocalStatePath?: string;
   readonly platform: NodeJS.Platform;
 }
@@ -276,7 +276,6 @@ export const readChromiumCookies = Effect.fn("ChromiumCookies.readChromiumCookie
           platform: source.platform,
           keychainService: source.keychainService,
           keychainAccount: source.keychainAccount,
-          linuxSecretApplication: source.linuxSecretApplication,
         })
   ).pipe(
     Effect.mapError(

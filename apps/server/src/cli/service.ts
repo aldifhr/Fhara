@@ -185,7 +185,7 @@ function formatServiceStatus(
   if (status.otherBaseDir !== undefined) {
     return [
       "Fhara service",
-      "  Status: installed for another T3 home",
+      "  Status: installed for another Fhara home",
       `  Base dir: ${status.otherBaseDir}`,
       `  Next: Pass \`${BootService.formatBootServiceBaseDirOption(status.otherBaseDir)}\` to manage it.`,
     ].join("\n");
@@ -390,7 +390,7 @@ const serviceProtectCommand = Command.make("protect", {
     Effect.gen(function* () {
       const unsupported = "Service protection needs Linux with systemd.";
       if ((yield* HostProcess.Platform) !== "linux") return yield* Console.log(unsupported);
-      // Before resolving config, which creates T3 directories that root would then own.
+      // Before resolving config, which creates Fhara directories that root would then own.
       if ((yield* HostProcess.UserId) === 0) {
         return yield* Console.log(
           "Run `t3 service protect` as the user that runs Fhara, without sudo. It asks for sudo when it needs root.",

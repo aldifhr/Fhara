@@ -1,6 +1,4 @@
-// The production icon, as GitHub shows the Fhara app, whatever this build's channel.
-import appIconUrl from "../../../../assets/prod/t3-black-web-apple-touch-180.png";
-
+// The app icon the web app already ships and serves, whatever this build's channel.
 export function T3AppIcon(props: { readonly className?: string }) {
-  return <img src={appIconUrl} alt="" className={props.className} />;
+  return <img src="/apple-touch-icon.png" alt="" className={props.className} />;
 }

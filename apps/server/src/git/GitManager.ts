@@ -149,7 +149,7 @@ export class GitManager extends Context.Service<
         readonly confirmTerminal?: boolean;
       },
     ) => Effect.Effect<GitBranchPullRequest | null, GitManagerServiceError>;
-    /** Whether T3 checked this pull request out onto the branch, which ties it to later threads. */
+    /** Whether Fhara checked this pull request out onto the branch, which ties it to later threads. */
     readonly checkedOutPullRequest: (input: {
       readonly cwd: string;
       readonly branch: string;
@@ -760,8 +760,8 @@ export const make = Effect.gen(function* () {
         ),
       ),
   );
-  // Hands the base T3 recorded for a branch to the host, whose own tools may keep it elsewhere.
-  // Best-effort: nothing T3 does reads it back from there.
+  // Hands the base Fhara recorded for a branch to the host, whose own tools may keep it elsewhere.
+  // Best-effort: nothing Fhara does reads it back from there.
   const shareBranchBase = Effect.fn("GitManager.shareBranchBase")(function* (
     cwd: string,
     branch: string,
@@ -2540,7 +2540,7 @@ export const make = Effect.gen(function* () {
     ) {
       return remembered.value;
     }
-    // invalidateStatus bumps the epoch. A read that started before a T3 git
+    // invalidateStatus bumps the epoch. A read that started before a Fhara git
     // action, or before a newer read finished, must not replace their state.
     const epoch = prLookupEpoch(cwd);
     const value = yield* read;

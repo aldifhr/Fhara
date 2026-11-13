@@ -352,7 +352,7 @@ export interface AcpAdapterV2Flavor {
   >;
   readonly requiresSignIn?: (cause: unknown) => boolean;
   /**
-   * Runs before attachment paths, T3 instructions and native slash-command detection,
+   * Runs before attachment paths, Fhara instructions and native slash-command detection,
    * so a rewrite can turn the user's text into a native command.
    */
   readonly rewriteUserText?: (
@@ -366,7 +366,7 @@ export interface AcpAdapterV2Flavor {
     EffectAcpSchema.InitializeRequest["clientCapabilities"]
   >["_meta"];
   readonly mcpOverHttp?: boolean;
-  /** The agent has no tool search of its own, so T3 lists optional tools on demand. */
+  /** The agent has no tool search of its own, so Fhara lists optional tools on demand. */
   readonly deferMcpTools?: boolean;
   readonly normalizeSessionUpdate?: (
     notification: EffectAcpSchema.SessionNotification,
@@ -467,7 +467,7 @@ export interface AcpAdapterV2Flavor {
         ) => EffectAcpSchema.RequestPermissionResponse | undefined;
       }
     | undefined;
-  /** Grok Auto asks only about classifier refusals; T3 policy must not auto-approve them. */
+  /** Grok Auto asks only about classifier refusals; Fhara policy must not auto-approve them. */
   readonly permissionDisposition?: (
     policy: ProviderAdapter.ProviderAdapterV2RuntimePolicy,
     request: EffectAcpSchema.RequestPermissionRequest,
@@ -603,7 +603,7 @@ export interface AcpAdapterV2Flavor {
    */
   readonly supportsImagePrompts?: boolean;
   /**
-   * True when this session's native system prompt carries T3's PR-linking instructions, so
+   * True when this session's native system prompt carries Fhara's PR-linking instructions, so
    * turns omit them. Must use the same negotiated check that sent them on session setup.
    */
   readonly sessionCarriesPullRequestLinking?: (
@@ -783,7 +783,7 @@ export const AcpProviderCapabilitiesV2 = {
   checkpointing: {
     appCanCheckpointFilesystem: true,
     supportsNestedCheckpointScopes: true,
-    // ACP lacks truncation; rollback restores T3 checkpoints and starts a fresh agent session.
+    // ACP lacks truncation; rollback restores Fhara checkpoints and starts a fresh agent session.
     providerCanRollbackConversation: true,
     providerRollbackReturnsSnapshot: true,
     providerCanReadConversationSnapshot: false,
@@ -933,7 +933,7 @@ function acpMcpContext(
     authorization: session.authorizationHeader,
     processEnvironment: {
       // The thread id every process the agent starts inherits, so a tool run
-      // from its shell can find its T3 thread. Claude and Codex sessions set
+      // from its shell can find its Fhara thread. Claude and Codex sessions set
       // the same variable (PortScanner.AGENT_THREAD_ENV; a string literal here
       // because this package cannot reach apps/server).
       T3CODE_THREAD_ID: session.threadId,
@@ -2045,7 +2045,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
         const compactionMarkers = yield* Ref.make(new Map<string, symbol>());
         // ACP may patch a completed compaction again; each compaction id marks its session once.
         const completedCompactionIds = yield* Ref.make(new Set<string>());
-        // The next prompt in a compacted session resends T3's instructions and runtime notes.
+        // The next prompt in a compacted session resends Fhara's instructions and runtime notes.
         // Only root sessions get prompts, so a marker on a child session is never read.
         const markSessionCompacted = Effect.fn("AcpAdapterV2.markSessionCompacted")(function* (
           sessionId: string,
@@ -6530,8 +6530,8 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
               Effect.fail(
                 EffectAcpErrors.AcpRequestError.internalError(
                   disposition === "ask"
-                    ? `The active T3 runtime policy requires approval for ${operation}. Request permission with session/request_permission before retrying.`
-                    : `The active T3 runtime policy does not allow ${operation}.`,
+                    ? `The active Fhara runtime policy requires approval for ${operation}. Request permission with session/request_permission before retrying.`
+                    : `The active Fhara runtime policy does not allow ${operation}.`,
                 ),
               ),
             ),
@@ -8049,7 +8049,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
                 "failed",
                 makeProviderFailure({
                   class: "provider_error",
-                  message: `${flavor.runtimeHarness ?? driver} sent nothing for ${minutes} ${minutes === 1 ? "minute" : "minutes"}, so T3 Code stopped the turn and restarted the agent. Send a message to continue.`,
+                  message: `${flavor.runtimeHarness ?? driver} sent nothing for ${minutes} ${minutes === 1 ? "minute" : "minutes"}, so Fhara stopped the turn and restarted the agent. Send a message to continue.`,
                 }),
               );
               return "retired" as const;
@@ -8243,7 +8243,7 @@ export const makeAcpAdapterV2 = Effect.fn("makeAcpAdapterV2")(function* (
           yield* Ref.set(activeSessionSetup, null);
           yield* Ref.set(activeSelection, null);
           yield* Ref.set(activeInteractionMode, null);
-          // A failed prompt may have been dropped, so the fresh runtime sends T3's notes again.
+          // A failed prompt may have been dropped, so the fresh runtime sends Fhara's notes again.
           yield* Ref.set(promptInstructionStates, new Map());
           yield* Ref.set(promptRuntimeInstructions, new Map());
           yield* Ref.set(compactionMarkers, new Map());

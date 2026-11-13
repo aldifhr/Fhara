@@ -456,12 +456,12 @@ process.exit(0);
     }),
   );
 
-  it.effect("starts the runtime in a T3 home whose name ends in a space", () =>
+  it.effect("starts the runtime in a Fhara home whose name ends in a space", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const parent = yield* fs.makeTempDirectoryScoped({ prefix: "t3-service-launcher-space-" });
-      const root = path.join(parent, "T3 data ");
+      const root = path.join(parent, "Fhara data ");
       const versionDir = path.join(root, "runtime", "versions", "1.0.0");
       yield* writeFakeRuntime(
         fs,
@@ -591,7 +591,7 @@ process.exit(0);
 
   it.effect.each([
     { unitVersion: "1.0.0", replacement: "an intentional downgrade" },
-    { unitVersion: "1.2.0", replacement: "another T3 home" },
+    { unitVersion: "1.2.0", replacement: "another Fhara home" },
   ])(
     "recovers a rolled-back update with unit $unitVersion and preserves $replacement",
     ({ unitVersion, replacement }) =>
@@ -657,7 +657,7 @@ process.exit(0);
         const staleLauncher = yield* createLauncher;
         // A local install can replace the selection or service owner without stopping this launcher.
         const selectedRoot =
-          replacement === "another T3 home" ? path.join(root, "other-home") : root;
+          replacement === "another Fhara home" ? path.join(root, "other-home") : root;
         yield* writeFakeRuntime(
           fs,
           path,
@@ -688,7 +688,7 @@ process.exit(0);
       }),
   );
 
-  it.effect("waits without exiting and restarts once the other owner releases the T3 home", () =>
+  it.effect("waits without exiting and restarts once the other owner releases the Fhara home", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
@@ -721,7 +721,7 @@ process.exit(0);
       yield* Effect.acquireRelease(
         Effect.sync(() =>
           vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-            if (String(chunk).includes("owns this T3 home")) refused.resolve();
+            if (String(chunk).includes("owns this Fhara home")) refused.resolve();
             return true;
           }),
         ),
@@ -809,7 +809,7 @@ process.exit(0);
         yield* Effect.acquireRelease(
           Effect.sync(() =>
             vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-              if (String(chunk).includes("owns this T3 home")) refused.resolve();
+              if (String(chunk).includes("owns this Fhara home")) refused.resolve();
               return true;
             }),
           ),
@@ -884,7 +884,7 @@ process.exit(0);
       yield* Effect.acquireRelease(
         Effect.sync(() =>
           vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-            if (String(chunk).includes("owns this T3 home")) refused.resolve();
+            if (String(chunk).includes("owns this Fhara home")) refused.resolve();
             return true;
           }),
         ),
@@ -911,7 +911,7 @@ process.exit(0);
     }),
   );
 
-  it.effect("treats the T3 home as owned while the lock or a pre-lock server holds it", () =>
+  it.effect("treats the Fhara home as owned while the lock or a pre-lock server holds it", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;

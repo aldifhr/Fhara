@@ -197,7 +197,7 @@ applies when the project and environment are both on **Inherit**.
 
 ## Worktree location
 
-New worktrees go in the `worktrees` folder of the T3 home directory. To put them somewhere else,
+New worktrees go in the `worktrees` folder of the Fhara home directory. To put them somewhere else,
 such as another drive, set **Settings → Worktrees → Worktree location** to an absolute path like
 `D:\worktrees` or `~/worktrees`. The setting is per machine. Existing worktrees stay where they
 are, and cleanup covers both the default folder and the custom one.
@@ -205,13 +205,13 @@ are, and cleanup covers both the default folder and the custom one.
 ## Fast worktree checkout on macOS
 
 Fast worktree checkout is a beta. Turn it on for each Mac in **Settings → Labs → Fast worktree
-checkout**. T3 Code then keeps a few recent checkouts of each repository in the `caches` folder of
-the T3 home directory. A new worktree is cloned from one of them with APFS copy-on-write, which is
+checkout**. Fhara then keeps a few recent checkouts of each repository in the `caches` folder of
+the Fhara home directory. A new worktree is cloned from one of them with APFS copy-on-write, which is
 about twice as fast as writing every file and makes the first `git status` in it fast as well.
 Turning it off deletes the cache.
 
 The first worktree of a repository uses Git's normal checkout and fills the cache. It needs Git 2.42
-or newer. Git's normal checkout is also used for worktrees on a different drive from the T3 home
+or newer. Git's normal checkout is also used for worktrees on a different drive from the Fhara home
 directory, sparse checkouts, repositories whose attributes use filters such as Git LFS, and
 repositories whose checkout settings changed.
 
@@ -231,7 +231,7 @@ merging, or when they have no commits beyond the default branch and their thread
 archived. Set settled retention to 0 days to remove a worktree at the next cleanup after
 settlement. In repositories without remotes,
 unchanged-worktree cleanup compares against the branch checked out in the project workspace;
-if that checkout has a detached HEAD, the worktree is kept. Only T3-managed worktrees are eligible.
+if that checkout has a detached HEAD, the worktree is kept. Only Fhara-managed worktrees are eligible.
 Active sessions and shared worktrees prevent removal. **Keep worktrees with local changes** defaults
 to **Uncommitted changes**, which protects tracked edits and untracked files but deletes ignored
 files such as `.env` and build output. **Any local files** also protects ignored files other than
@@ -257,7 +257,7 @@ working. Current logs, message attachments, and browser profiles are kept.
 
 Select the project and open Project to choose an icon, emoji, monogram, or image. The choice applies to
 every checkout in the project group and appears on connected clients. Choose **Automatic** to let
-T3 Code detect an icon again.
+Fhara detect an icon again.
 
 Choose **Monogram** in the icon picker to set one or two letters or numbers and a color.
 
@@ -271,6 +271,6 @@ In Source control, enable **Automatically pull** to keep the default-branch chec
 with its configured upstream. Choose an environment to set the default or a project to override it.
 On mobile, use **Settings → Source control** to change selected environment defaults or project overrides.
 
-T3 Code only pulls when it can fast-forward and the checkout has no changed files, untracked files,
+Fhara only pulls when it can fast-forward and the checkout has no changed files, untracked files,
 or local commits. It skips checkouts on another branch or without an upstream. If a checkout has
 local work, resolve it yourself before automatic pulls can resume.

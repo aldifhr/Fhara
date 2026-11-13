@@ -106,14 +106,12 @@ describe("RightPanelTabs", () => {
           onAddFiles={noop}
           onAddPullRequest={noop}
           onAddPullRequests={noop}
-          onAddDevice={noop}
           browserAvailable={false}
           terminalAvailable
           diffAvailable={false}
           filesAvailable={false}
           pullRequestAvailable={false}
           pullRequestsAvailable={false}
-          deviceAvailable={false}
         >
           {null}
         </RightPanelTabs>
@@ -179,14 +177,12 @@ function panel(activeSurface: RightPanelSurface) {
     onAddFiles: noop,
     onAddPullRequest: noop,
     onAddPullRequests: noop,
-    onAddDevice: noop,
     browserAvailable: true,
     terminalAvailable: true,
     diffAvailable: true,
     filesAvailable: true,
     pullRequestAvailable: true,
     pullRequestsAvailable: true,
-    deviceAvailable: true,
     children: (
       <div data-testid="surface-content">
         {/* Stands in for ServerBrowserSurface, whose page canvas handles thumb buttons itself. */}

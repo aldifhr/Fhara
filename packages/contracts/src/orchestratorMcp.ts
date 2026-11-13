@@ -809,7 +809,7 @@ export const OrchestratorMcpRequestSecretInput = Schema.Struct({
   }),
   placeholder: Schema.optional(TrimmedNonEmptyString),
   delivery: Schema.optional(Schema.Literals(["secretRef", "file"])).annotate({
-    description: "secretRef (default) for a T3 tool; file for a command.",
+    description: "secretRef (default) for a Fhara tool; file for a command.",
   }),
   value: Schema.optional(PastedSecretValue).annotate({
     description: "Pasted in this thread; no card.",

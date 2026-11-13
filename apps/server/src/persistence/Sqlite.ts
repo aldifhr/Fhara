@@ -152,7 +152,7 @@ const makeLayerConfig = <E, R>(
 
 export const layerConfig = makeLayerConfig(layerFromPath);
 
-/** For CLI commands: pending migrations run only while no server owns the T3 home. */
+/** For CLI commands: pending migrations run only while no server owns the Fhara home. */
 export const layerCliConfig = makeLayerConfig(
   makeLayerFromPath(() => makeLayerSetup(runMigrationsAsOwner())),
 );

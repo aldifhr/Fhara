@@ -1,11 +1,9 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
 import * as Electron from "electron";
-import * as HostProcess from "@t3tools/shared/HostProcess";
 
 const electronSafeStorageErrorFields = {
   cause: Schema.Defect(),
@@ -61,14 +59,11 @@ export class ElectronSafeStorage extends Context.Service<
     readonly decryptString: (
       value: Uint8Array,
     ) => Effect.Effect<string, ElectronSafeStorageDecryptError>;
-    readonly selectedStorageBackend: Effect.Effect<Option.Option<string>>;
   }
 >()("@t3tools/desktop/electron/ElectronSafeStorage") {}
 
 /** @public */
 export const make = Effect.gen(function* () {
-  const platform = yield* HostProcess.Platform;
-
   return ElectronSafeStorage.of({
     isEncryptionAvailable: Effect.try({
       try: () => Electron.safeStorage.isEncryptionAvailable(),
@@ -85,16 +80,6 @@ export const make = Effect.gen(function* () {
         try: () => Electron.safeStorage.decryptString(Buffer.from(value)),
         catch: (cause) => new ElectronSafeStorageDecryptError({ cause }),
       });
-    }),
-    selectedStorageBackend: Effect.sync(() => {
-      if (platform !== "linux") {
-        return Option.none();
-      }
-      try {
-        return Option.fromNullishOr(Electron.safeStorage.getSelectedStorageBackend());
-      } catch {
-        return Option.none();
-      }
     }),
   });
 });

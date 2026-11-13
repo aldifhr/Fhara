@@ -143,11 +143,7 @@ export const make = ElectronApp.of({
     const platform = yield* HostProcess.Platform;
     let identifier = Electron.app.getSystemLocale();
     let hourCycle: "h12" | "h23" | undefined;
-    if (platform === "linux") {
-      const env = yield* HostProcess.Environment;
-      const timeLocale = (env.LC_ALL || env.LC_TIME || env.LANG)?.split(".")[0];
-      if (timeLocale && timeLocale !== "C" && timeLocale !== "POSIX") identifier = timeLocale;
-    } else if (platform === "darwin") {
+    if (platform === "darwin") {
       if (Electron.systemPreferences.getUserDefault("AppleICUForce24HourTime", "boolean")) {
         hourCycle = "h23";
       } else if (Electron.systemPreferences.getUserDefault("AppleICUForce12HourTime", "boolean")) {

@@ -1228,52 +1228,54 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   }
 }
 
-/* Keep both sidebar implementations (default and legacy) on the same quiet
-   zinc hierarchy: zinc-50 navigation, zinc-25 hover, and white selected/raised
-   surfaces. */
+/* Fhara's warm paper hierarchy: canvas, panel and hover all sit on one warm
+   ramp (#f1f0ec → #fafaf8 → #efeee9), ink is the only action colour, and there
+   is no accent. Active and selected rows reuse the hover colour; the medium
+   title weight and the hairline ring carry the state, as in the old Fhara shell. */
 [data-app-sidebar] {
-  --background: var(--color-zinc-25);
-  --foreground: var(--color-zinc-900);
-  --card: var(--color-white);
-  --card-foreground: var(--color-zinc-900);
-  --accent: var(--color-zinc-100);
-  --accent-foreground: var(--color-zinc-900);
-  --muted: var(--color-zinc-50);
-  --muted-foreground: var(--color-zinc-500);
-  --border: var(--color-zinc-200);
-  --input: var(--color-zinc-300);
-  --sidebar: var(--color-zinc-50);
-  --sidebar-foreground: var(--color-zinc-900);
-  --sidebar-muted-foreground: var(--color-zinc-500);
-  --sidebar-control-surface: var(--color-zinc-100);
-  --sidebar-row-hover: var(--color-zinc-25);
-  --sidebar-row-active: var(--color-white);
-  --sidebar-row-selected: var(--color-white);
-  --sidebar-border: var(--color-zinc-200);
+  --background: #f1f0ec;
+  --foreground: #1d1d22;
+  --card: #fafaf8;
+  --card-foreground: #1d1d22;
+  --accent: #efeee9;
+  --accent-foreground: #1d1d22;
+  --muted: #f5f4f1;
+  --muted-foreground: #6b6b76;
+  --border: #e6e4de;
+  --input: #d9d6cf;
+  --sidebar: #fafaf8;
+  --sidebar-foreground: #1d1d22;
+  --sidebar-muted-foreground: #6b6b76;
+  --sidebar-control-surface: #f3f2ee;
+  --sidebar-row-hover: #efeee9;
+  --sidebar-row-active: #efeee9;
+  --sidebar-row-selected: #efeee9;
+  --sidebar-border: #e6e4de;
   --sidebar-stage-fade: var(--sidebar);
+  /* Row metadata sits a step below read titles, between Fhara's ink-3 and ink-2. */
+  --secondary-label: #8a8a94;
 
   @variant dark {
-    --background: #000;
-    --foreground: #f1f3f7;
-    --card: #000;
+    --background: #0b0b0d;
+    --foreground: #ececf1;
+    --card: #131316;
     --card-foreground: var(--foreground);
-    --accent: #191a1d;
-    --accent-foreground: #f7f9ff;
-    --muted: #0a0a0a;
-    --muted-foreground: #a3a3a3;
-    --border: rgb(255 255 255 / 8%);
-    --input: rgb(255 255 255 / 18%);
-    --sidebar: var(--card);
+    --accent: #1d1d22;
+    --accent-foreground: var(--foreground);
+    --muted: #18181c;
+    --muted-foreground: #9a9aa5;
+    --border: #24242a;
+    --input: #2e2e35;
+    --sidebar: #131316;
     --sidebar-foreground: var(--foreground);
-    --sidebar-muted-foreground: var(--muted-foreground);
-    --sidebar-control-surface: var(--muted);
-    --sidebar-row-hover: color-mix(in srgb, var(--contrast-foreground) 8%, transparent);
-    --sidebar-row-active: color-mix(in srgb, var(--contrast-foreground) 11%, transparent);
-    --sidebar-row-selected: color-mix(in srgb, var(--contrast-foreground) 7%, transparent);
-    --sidebar-border: var(--border);
+    --sidebar-muted-foreground: #9a9aa5;
+    --sidebar-control-surface: #18181c;
+    --sidebar-row-hover: #1d1d22;
+    --sidebar-row-active: #1d1d22;
+    --sidebar-row-selected: #1d1d22;
+    --sidebar-border: #24242a;
     --sidebar-stage-fade: var(--card);
-    /* Row metadata sits a step below read titles (75% white). */
-    --secondary-label: #8f8f8f;
+    --secondary-label: #82828d;
   }
 }
 

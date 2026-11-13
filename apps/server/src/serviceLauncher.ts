@@ -903,7 +903,7 @@ export class Launcher {
       const lock = await tryAcquireSqliteLock(lockPath);
       if (lock !== undefined) return lock;
       if (attempt >= LOCK_ATTEMPTS) {
-        throw new Error("Another Fhara service launcher still runs for this T3 home.");
+        throw new Error("Another Fhara service launcher still runs for this Fhara home.");
       }
       await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
     }
@@ -1343,7 +1343,7 @@ export class Launcher {
       }
     }
     this.#log(
-      "[service-launcher] Another Fhara server owns this T3 home. This service starts again once it stops.\n",
+      "[service-launcher] Another Fhara server owns this Fhara home. This service starts again once it stops.\n",
     );
     this.#stateDirFreeProbes = 0;
     // The interval also keeps Node alive: signal listeners alone do not.
@@ -1366,7 +1366,7 @@ export class Launcher {
     this.#stateDirFreeProbes = owned ? 0 : this.#stateDirFreeProbes + 1;
     if (this.#stateDirFreeProbes < 2) return;
     this.#clearTimer();
-    this.#log("[service-launcher] The T3 home is free again. Starting the server.\n");
+    this.#log("[service-launcher] The Fhara home is free again. Starting the server.\n");
     const update = this.#state.update;
     if (update?.status === "pending") await this.#startTrial(update);
     else await this.#startChild(this.#state.activeVersion, "active", update);

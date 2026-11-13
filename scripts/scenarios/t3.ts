@@ -26,7 +26,7 @@ export interface T3State {
   }) => Promise<void>;
 }
 
-export interface T3 extends T3State {
+export interface Fhara extends T3State {
   /** Opens the app, signed in, at `path`. */
   readonly open: (path?: string) => Promise<void>;
 }
@@ -122,7 +122,7 @@ const readPairingPath = Effect.gen(function* () {
   return yield* fs.readFileString(path.join(T3_HOME, "pairing-path"));
 });
 
-export const test = base.extend<{ t3: T3 }>({
+export const test = base.extend<{ t3: Fhara }>({
   t3: async ({ app }, use) => {
     const { state, cleanup } = makeState(T3_HOME);
     await use({

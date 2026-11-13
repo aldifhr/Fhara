@@ -3,7 +3,7 @@
 <p align="center">A personal multi-agent orchestrator, run locally.</p>
 
 Fhara is a personal coding-agent orchestrator (github.com/aldifhr/Fhara). It is a fork of
-[T3 Code](https://github.com/pingdotgg/t3code) by T3 Tools Inc. (MIT), trimmed to a lean,
+[Fhara](https://github.com/pingdotgg/t3code) by T3 Tools Inc. (MIT), trimmed to a lean,
 local-only setup and rebranded as Fhara. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## What is in this fork
@@ -13,7 +13,7 @@ local-only setup and rebranded as Fhara. See [THIRD_PARTY_NOTICES.md](./THIRD_PA
   OpenAI-compatible endpoint), Antigravity, and ACP registry agents. Cursor, Grok, fx, Kiro, Pi
   and Muse were removed.
 - **GitHub only** for source control. The other forges were removed.
-- **No analytics by default** and **no self-update** from upstream T3 Code releases, so an update
+- **No analytics by default** and **no self-update** from upstream Fhara releases, so an update
   can never replace the fork with the upstream build.
 
 Internal package names (`@t3tools/*`, the `t3` server package) are kept as they are to make
@@ -29,7 +29,7 @@ pnpm dev          # server + web, bound to this machine
 ```
 
 See the [development runbook](./docs/operations/development.md#first-checkout) and the
-[architecture overview](./docs/internals/overview.md). Some docs still describe upstream T3 Code
+[architecture overview](./docs/internals/overview.md). Some docs still describe upstream Fhara
 features that this fork removed.
 
 ## License

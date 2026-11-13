@@ -107,7 +107,7 @@ export function generateSpeechCatalog(
         size: file.size,
         sha256: file.sha256,
         license: model.license,
-        // T3 selects base languages; the engine's prompt dictionary accepts their short aliases.
+        // Fhara selects base languages; the engine's prompt dictionary accepts their short aliases.
         languages,
         benchmark: {
           accuracy,

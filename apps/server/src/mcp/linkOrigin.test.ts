@@ -50,7 +50,7 @@ import * as PeerLinkRequests from "../peer/PeerLinkRequests.ts";
 import * as PeerLinks from "../peer/PeerLinks.ts";
 
 // A linked environment's session drives this one's real orchestrator through
-// its real T3 tools. What the link starts carries its origin, and the link
+// its real Fhara tools. What the link starts carries its origin, and the link
 // changes only that.
 
 const instanceId = ProviderInstanceId.make("codex");
@@ -223,7 +223,7 @@ const clientScope = (
   environmentId: EnvironmentId.make("environment:box"),
   requestNamespace: `client:${sessionId}`,
   thread: undefined,
-  client: { sessionId, label: `T3 Code · ${sessionId}`, access, linked },
+  client: { sessionId, label: `Fhara · ${sessionId}`, access, linked },
   capabilities: new Set(["orchestration", "worktree", "pull-requests"]),
   issuedAt: 0,
 });
@@ -296,7 +296,7 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       const shell = yield* projections.getThreadShell(launched);
       assert.deepEqual(shell?.linkOrigin, {
         sessionId: "laptop",
-        label: "T3 Code · laptop",
+        label: "Fhara · laptop",
         access: "auto",
       });
 
@@ -405,7 +405,7 @@ it.layer(Layer.provideMerge(layerTools, layerOrchestration))("work a link starts
       const launched = yield* launch(trusted, "Started from the desk");
       assert.deepEqual((yield* projections.getThreadShell(launched))?.linkOrigin, {
         sessionId: "trusted",
-        label: "T3 Code · trusted",
+        label: "Fhara · trusted",
         access: "full-access",
       });
 

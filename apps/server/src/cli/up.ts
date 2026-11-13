@@ -130,7 +130,7 @@ const formatSetup = (setup: Setup) => {
   // This home's access settings reach no service, so only the service is shown.
   if (service.otherBaseDir !== undefined) {
     return [
-      `  ${"Service".padEnd(15)}installed for another T3 home · ${service.otherBaseDir}`,
+      `  ${"Service".padEnd(15)}installed for another Fhara home · ${service.otherBaseDir}`,
       "",
       `Pass \`${BootService.formatBootServiceBaseDirOption(service.otherBaseDir)}\` to manage it.`,
     ].join("\n");
@@ -150,7 +150,7 @@ const formatSetup = (setup: Setup) => {
           [
             "T3 Connect",
             setup.connect
-              ? "on · your T3 account"
+              ? "on · your Fhara account"
               : setup.connectRevoked
                 ? "off · link revoked. Run `t3 connect`."
                 : "off",
@@ -441,7 +441,7 @@ export const upCommand = Command.make("up", {
   ...projectLocationFlags,
   connect: Flag.Boolean("connect").pipe(
     Flag.withDescription(
-      "Allow access through T3 Connect with your T3 account. Turn off with --no-connect.",
+      "Allow access through T3 Connect with your Fhara account. Turn off with --no-connect.",
     ),
     Flag.optional,
   ),

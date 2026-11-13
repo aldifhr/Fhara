@@ -508,7 +508,7 @@ it("grades a page passed by path on the file the agent last wrote there", () => 
     'calls html_render {"path":"/tmp/v.html","page":"~var(--"}',
     "page known html_render /tmp/v.html",
   ]);
-  // T3 may still refuse an unanswered page call, so early grading waits for its result.
+  // Fhara may still refuse an unanswered page call, so early grading waits for its result.
   assert.isFalse(failedEarly(expect, run([write, render])));
   assert.isTrue(failedEarly(expect, run([write, { ...render, failed: false }])));
   assert.deepEqual(failed({ notCalls: ["html_render"] }, run([{ ...render, failed: true }])), [
@@ -581,7 +581,7 @@ const template = {
     {
       role: "system",
       content:
-        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## T3 Code orchestration\nold text",
+        "Main prompt.\n - Primary working directory: /home/alice/app\n\n<runtime_info>old</runtime_info>\n\n## Fhara orchestration\nold text",
     },
     {
       role: "system",
@@ -627,7 +627,7 @@ const browserCase = (id: string) =>
     .map((line) => decodeDeviceCase(line))
     .find((c) => c.id === id)!;
 
-it("rebuilds the template from this checkout and sends a child T3's task prompt", () => {
+it("rebuilds the template from this checkout and sends a child Fhara's task prompt", () => {
   const base = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
   const system = base.system.map((block) => String(block.text));
   assert.deepEqual(system.slice(0, 2), [
@@ -635,13 +635,13 @@ it("rebuilds the template from this checkout and sends a child T3's task prompt"
     `Main prompt.\n - Primary working directory: /home/user/app\n\n${t3SystemAppend("claude-sonnet-5-5")}`,
   ]);
   // The eval offers the device tools, so Claude's append carries the device block.
-  assert.include(t3SystemAppend("claude-sonnet-5-5"), "## T3 Code devices");
+  assert.include(t3SystemAppend("claude-sonnet-5-5"), "## Fhara devices");
   assert.equal(base.environment.cwd, "/home/user/app");
   assert.include(system[2], "model named Sonnet 5.5. The exact model ID is claude-sonnet-5-5.");
   const deferred = system[2]?.split("Load them first:\n")[1]?.split("\n\n")[0]?.split("\n") ?? [];
   assert.includeMembers(deferred, ["Monitor", "mcp__t3-code__delegate_task"]);
   assert.notInclude(deferred, "mcp__t3-code__retired_tool");
-  // A delegated child is never offered the tools T3 hides from subagents.
+  // A delegated child is never offered the tools Fhara hides from subagents.
   assert.include(deferred, "mcp__t3-code__watch_pull_request");
   const child = buildBase(template, {
     model: "claude-sonnet-5-5",
@@ -663,7 +663,7 @@ it("rebuilds the template from this checkout and sends a child T3's task prompt"
   assert.notEqual(prompt?.text, childCase.prompt);
 });
 
-it("lists link tools only while a case turns the beta on, and sends chips as T3 projects them", () => {
+it("lists link tools only while a case turns the beta on, and sends chips as Fhara projects them", () => {
   const off = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
   const on = buildBase(template, {
     model: "claude-sonnet-5-5",
@@ -907,7 +907,7 @@ it("sends a GPT shell model the same simulator request, with a strict JSON reply
   );
 });
 
-it("links a PR a shell command created, as T3 does, but not one it only read", () => {
+it("links a PR a shell command created, as Fhara does, but not one it only read", () => {
   const base = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
   const bash = (command: string, result: string) => ({ tool: "Bash", input: { command }, result });
   const sample = makeSample(
@@ -1019,7 +1019,7 @@ it.effect("saves a pasted value with no card where request_secret takes one", ()
       maxSteps: 6,
       shellModel: "claude-haiku-5-5",
     } as const;
-    // A card's mocked outcome does not apply to a value T3 saves without one.
+    // A card's mocked outcome does not apply to a value Fhara saves without one.
     const sample = makeSample(
       {
         ...childCase,
@@ -1035,7 +1035,7 @@ it.effect("saves a pasted value with no card where request_secret takes one", ()
       input: { label: "Pixel PIN", value: "482916" },
     }).pipe(Effect.map((block) => JSON.parse(String(block.content))));
     if (!savesPastedSecrets) {
-      // On refs without `value`, T3 ignores it and the card runs.
+      // On refs without `value`, Fhara ignores it and the card runs.
       assert.equal(result.status, "declined");
       assert.deepEqual(sample.secretFiles, []);
       return;
@@ -1047,7 +1047,7 @@ it.effect("saves a pasted value with no card where request_secret takes one", ()
   }).pipe(Effect.provide(FetchHttpClient.layer)),
 );
 
-it.effect("fails preview calls with T3's errors when browser access is off or a mock is one", () =>
+it.effect("fails preview calls with Fhara's errors when browser access is off or a mock is one", () =>
   Effect.gen(function* () {
     const base = buildBase(template, { model: "claude-sonnet-5-5", keepUserInstructions: false });
     const config = {
@@ -1076,7 +1076,7 @@ it.effect("fails preview calls with T3's errors when browser access is off or a 
         is_error: true,
         content: off,
       });
-    assert.notInclude(t3SystemAppend("claude-sonnet-5-5", true, false), "## T3 Code browser");
+    assert.notInclude(t3SystemAppend("claude-sonnet-5-5", true, false), "## Fhara browser");
     const unsupported = "br-guard-preview-open-unsupported";
     assert.deepInclude(yield* answer(unsupported, "preview_open"), {
       is_error: true,
@@ -1148,7 +1148,7 @@ it.effect("builds device cases from product-backed worlds and synthetic prior tu
 );
 
 // Models recover from either result, so this keeps the guard case failing on the old success.
-it.effect("seeds T3's error for a prior background wait whose IDs match nothing", () =>
+it.effect("seeds Fhara's error for a prior background wait whose IDs match nothing", () =>
   Effect.gen(function* () {
     const cases = NodeFS.readFileSync(
       new URL("./cases/orchestration.ndjson", import.meta.url),
@@ -2007,7 +2007,7 @@ it.each([
   "! xcrun simctl io PRIVATE screenshot /tmp/proof.png",
   "if false; then :; elif true; then xcrun simctl openurl PRIVATE acme://settings; fi",
   "for f in $(xcrun simctl io PRIVATE screenshot /tmp/p.png); do echo $f; done",
-  // Every agent-device command over ssh bypasses T3, including ones outside a fixed verb list.
+  // Every agent-device command over ssh bypasses Fhara, including ones outside a fixed verb list.
   "ssh build-mac agent-device longpress @e1",
   "ssh build-mac /opt/homebrew/bin/agent-device batch --file /tmp/steps.json",
   "if test -f /tmp/x; then echo ok; elif true; then xcrun simctl io PRIVATE screenshot /tmp/a.png; fi",
@@ -2149,7 +2149,7 @@ it.each([
   },
 );
 
-it("gives native children hook context while excluding the parent's T3 append and history", async () => {
+it("gives native children hook context while excluding the parent's Fhara append and history", async () => {
   const testCase = deviceCases().find((c) => c.id === "NAT-01")!;
   assert.isEmpty(testCase.setup.priorTurns ?? []);
   const child = buildBase(template, {
@@ -2688,11 +2688,11 @@ it("does not credit a capture attempt on a different host", () => {
 });
 
 it.each([
-  ["T3's result names the remote device", { hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }, true],
-  ["T3's result names a local device", { hostId: "local" }, false],
+  ["Fhara's result names the remote device", { hostId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }, true],
+  ["Fhara's result names a local device", { hostId: "local" }, false],
   ["failed attempt uses the matching open session", undefined, true],
 ] as const)(
-  "credits a device_screenshot without hostId by the device T3 reached: %s",
+  "credits a device_screenshot without hostId by the device Fhara reached: %s",
   (_, reached, pass) => {
     const c = deviceCases().find((c) => c.id === "HOST-01a")!;
     const input = {

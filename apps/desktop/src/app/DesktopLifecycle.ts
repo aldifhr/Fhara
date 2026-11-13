@@ -12,7 +12,6 @@ import type * as Electron from "electron";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
-import { stopChildProcessesBeforeExit } from "./DesktopExitChildren.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";
 import * as DesktopShutdown from "./DesktopShutdown.ts";
 import * as ElectronApp from "../electron/ElectronApp.ts";
@@ -303,34 +302,6 @@ export const make = DesktopLifecycle.of({
         }).pipe(Effect.withSpan("desktop.lifecycle.windowAllClosed")),
       );
     });
-
-    // Electron can exit without before-quit, e.g. when the X11/Wayland connection drops.
-    // Children (the backend too) get SIGTERM while main still holds an AppImage mount open.
-    // Prepended so the record is buffered before the trace sink's own exit flush runs.
-    yield* addScopedListener(
-      process,
-      "exit",
-      (exitCode: number) => {
-        Effect.runSyncWith(context)(
-          Effect.gen(function* () {
-            const shutdown = yield* DesktopShutdown.DesktopShutdown;
-            // "allowed" without a finished shutdown is the updater's quit; its relaunched app is a child.
-            if (quit.phase === "allowed" || (yield* shutdown.isComplete)) return;
-            const attributes = { exitCode, quitPhase: quit.phase };
-            yield* Effect.gen(function* () {
-              yield* logLifecycleError(
-                "desktop main process exiting before shutdown completed",
-                attributes,
-              );
-              if (environment.platform !== "linux") return;
-              const killed = stopChildProcessesBeforeExit(process.pid);
-              yield* Effect.annotateCurrentSpan({ killedChildPids: killed });
-            }).pipe(Effect.withSpan("desktop.lifecycle.exit", { attributes }));
-          }),
-        );
-      },
-      { prepend: true },
-    );
 
     if (environment.platform !== "win32") {
       yield* addScopedListener(process, "SIGINT", () => {

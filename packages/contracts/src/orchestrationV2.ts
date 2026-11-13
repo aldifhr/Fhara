@@ -123,7 +123,7 @@ export type OrchestrationV2LinkOrigin = typeof OrchestrationV2LinkOrigin.Type;
 /**
  * Work from a link paired below full access may change only work from the same
  * link. A full-access link's agents already run as this environment's user,
- * so fencing T3's own tools would stop nothing they could not do anyway. An
+ * so fencing Fhara's own tools would stop nothing they could not do anyway. An
  * origin stamped before access was recorded stays fenced.
  */
 export const linkOriginIsFenced = (origin: OrchestrationV2LinkOrigin) =>
@@ -547,7 +547,7 @@ export const isDelegatedAppThread = (
   // MCP-launched threads store `delegatedFrom: null` at runtime, so check both absent shapes.
   thread.lineage.relationshipToParent === "subagent" || thread.delegatedFrom != null;
 
-/** Provider-native children cannot receive messages; T3 delegate_task children can. */
+/** Provider-native children cannot receive messages; Fhara delegate_task children can. */
 export function isProviderNativeSubagentThread(
   thread: Pick<OrchestrationV2AppThread, "lineage" | "creationSource">,
 ): boolean {
@@ -605,7 +605,7 @@ export function parseGoalCommand(message: {
   }
 }
 
-/** Why T3 Code sent this `/compact` on its own, or undefined for one someone asked for. */
+/** Why Fhara sent this `/compact` on its own, or undefined for one someone asked for. */
 export function idleCompactionOf(
   message: CompactionMessageFields,
 ): OrchestrationV2IdleCompaction | undefined {
@@ -1344,7 +1344,7 @@ export const OrchestrationV2Notification = Schema.Struct({
 });
 export type OrchestrationV2Notification = typeof OrchestrationV2Notification.Type;
 
-/** Why T3 Code compacted a thread on its own, on the `/compact` it sent. */
+/** Why Fhara compacted a thread on its own, on the `/compact` it sent. */
 export const OrchestrationV2IdleCompaction = Schema.Literals(["beforeCacheExpires", "onReturn"]);
 export type OrchestrationV2IdleCompaction = typeof OrchestrationV2IdleCompaction.Type;
 

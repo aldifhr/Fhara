@@ -92,7 +92,7 @@ export interface BootServicePlan {
 }
 
 // systemd refuses an executable with a quote, backslash or control character even when
-// quoted. The executable lives under the T3 home, so this also catches a home with a newline.
+// quoted. The executable lives under the Fhara home, so this also catches a home with a newline.
 const systemdUnsafeValue = (plan: BootServicePlan) =>
   /[\x00-\x1f\x7f"'\\]/.test(plan.program[0] ?? "");
 
@@ -646,7 +646,7 @@ type BootServiceProblem = typeof BootServiceProblem.Type;
 export function formatBootServiceProblem(problem: BootServiceProblem): string {
   switch (problem) {
     case "user-manager-unavailable":
-      return "Cannot reach the systemd user manager. Run `systemctl --user status` in a login session for the service user. Install your distribution's systemd user-session support if it is missing; do not run T3 with sudo.";
+      return "Cannot reach the systemd user manager. Run `systemctl --user status` in a login session for the service user. Install your distribution's systemd user-session support if it is missing; do not run Fhara with sudo.";
     case "linger-unavailable":
       return 'Cannot check whether this user can run services after logout. Run `loginctl show-user "$(id -un)" --property=Linger` and check that systemd-logind is available.';
     case "linger-disabled":
@@ -718,7 +718,7 @@ export class BootServiceBaseDirUnsupportedError extends Schema.TaggedError<BootS
   { baseDir: Schema.String },
 ) {
   override get message(): string {
-    return `systemd cannot run Fhara from ${JSON.stringify(this.baseDir)}: the path contains a quote, backslash or control character. Choose another T3 home with --base-dir.`;
+    return `systemd cannot run Fhara from ${JSON.stringify(this.baseDir)}: the path contains a quote, backslash or control character. Choose another Fhara home with --base-dir.`;
   }
 
   override get [CliError.userMessage]() {
@@ -742,7 +742,7 @@ export interface BootServiceStatus {
   readonly current: boolean;
   readonly installedVersion?: string;
   readonly installedBaseDir?: string;
-  /** Set when the installed unit serves a different T3 home than this CLI. */
+  /** Set when the installed unit serves a different Fhara home than this CLI. */
   readonly otherBaseDir?: string;
   readonly problems?: ReadonlyArray<BootServiceProblem>;
   readonly unitPath: string;

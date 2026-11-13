@@ -192,7 +192,7 @@ describe("CodexAdapterV2 runtime policy", () => {
       }),
   );
 
-  it.effect("derives concrete Codex turn policies from every T3 runtime mode", () =>
+  it.effect("derives concrete Codex turn policies from every Fhara runtime mode", () =>
     Effect.gen(function* () {
       const build = (
         runtimeMode: "approval-required" | "auto-accept-edits" | "auto" | "full-access",
@@ -666,7 +666,7 @@ function codexReplayPreamble(input: {
         id: 1,
         method: "initialize",
         params: {
-          clientInfo: { name: "T3 Code", title: "T3 Code", version: packageJson.version },
+          clientInfo: { name: "Fhara", title: "Fhara", version: packageJson.version },
           capabilities: {
             experimentalApi: true,
             optOutNotificationMethods: ["turn/diff/updated"],
@@ -683,7 +683,7 @@ function codexReplayPreamble(input: {
       frame: {
         id: 1,
         result: {
-          userAgent: "T3 Code/0.156.1",
+          userAgent: "Fhara/0.156.1",
           codexHome: "/tmp/codex-home",
           platformFamily: "unix",
           platformOs: "macos",
@@ -1254,7 +1254,7 @@ describe("CodexAdapterV2 session initialize", () => {
               frame: {
                 id: 1,
                 result: {
-                  userAgent: "T3 Code/0.144.3 (Mac OS 15.5.0; x86_64) unknown (T3 Code; 0.1.5)",
+                  userAgent: "Fhara/0.144.3 (Mac OS 15.5.0; x86_64) unknown (Fhara; 0.1.5)",
                   codexHome: "/tmp/codex-home",
                   platformFamily: "unix",
                   platformOs: "macos",
@@ -2847,7 +2847,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
     ),
   );
 
-  it.effect("preserves T3 context on the wire and restores it after compaction", () =>
+  it.effect("preserves Fhara context on the wire and restores it after compaction", () =>
     Effect.gen(function* () {
       const nativeThreadId = "context-thread";
       const nativeTurnId = "context-turn";
@@ -2988,7 +2988,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
       assert.deepEqual(
         wireOrder,
         ["item/completed", "turn/completed", "thread/inject_items"],
-        "restored T3 context while the compacting native turn was still running",
+        "restored Fhara context while the compacting native turn was still running",
       );
     }).pipe(
       Effect.provide(
@@ -4884,7 +4884,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
                     id: `image-${index}`,
                     status: "completed",
                     result,
-                    revisedPrompt: "A tree shaped like T3",
+                    revisedPrompt: "A tree shaped like Fhara",
                     transparentBackground: true,
                     ...image,
                   },
@@ -4931,7 +4931,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
         assert.strictEqual(item.title, "Generate image");
         if (item.type !== "dynamic_tool") continue;
         assert.deepEqual(item.input, {
-          prompt: "A tree shaped like T3",
+          prompt: "A tree shaped like Fhara",
           transparent_background: true,
         });
         const image = images[index]!;

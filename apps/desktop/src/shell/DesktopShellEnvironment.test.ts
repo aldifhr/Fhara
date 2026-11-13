@@ -423,7 +423,7 @@ describe("DesktopShellEnvironment", () => {
 
         yield* runShellEnvironment({
           env,
-          platform: "linux",
+          platform: "darwin",
           handler: () => "",
           processSpawner: ChildProcessSpawner.make((command) => {
             if (command._tag !== "StandardCommand") return Effect.succeed(makeProcess(""));
@@ -448,7 +448,7 @@ describe("DesktopShellEnvironment", () => {
         Effect.all([service.awaitDiscovery, service.awaitUserShellDiscovery]);
       const answered = yield* runShellEnvironment({
         env,
-        platform: "linux",
+        platform: "darwin",
         userShell: "/usr/local/bin/fish",
         use: (service) => discovery(service).pipe(Effect.map(([, fromUserShell]) => fromUserShell)),
         handler: (command) => {
@@ -468,7 +468,7 @@ describe("DesktopShellEnvironment", () => {
       // Only the platform fallback answered: its PATH can miss folders the user's shell adds.
       const fallbackOnly = yield* runShellEnvironment({
         env: { SHELL: "/usr/bin/fish", PATH: "/usr/bin" },
-        platform: "linux",
+        platform: "darwin",
         use: (service) =>
           discovery(service).pipe(
             Effect.map(([prepared, fromUserShell]) => prepared && !fromUserShell),
@@ -589,7 +589,7 @@ describe("DesktopShellEnvironment", () => {
 
       yield* runShellEnvironment({
         env,
-        platform: "linux",
+        platform: "darwin",
         handler: () =>
           envOutput({
             PATH: "/home/me/.local/bin:/mise/installs/claude/latest:/mise/shims",
@@ -804,30 +804,4 @@ describe("DesktopShellEnvironment", () => {
     }),
   );
 
-  it.effect("prefers login-shell desktop session hints over inherited values on linux", () =>
-    Effect.gen(function* () {
-      const env: NodeJS.ProcessEnv = {
-        SHELL: "/bin/zsh",
-        PATH: "/usr/bin",
-        XDG_CURRENT_DESKTOP: "wrong-launcher",
-        XDG_SESSION_DESKTOP: "wrong-launcher",
-      };
-
-      yield* runShellEnvironment({
-        env,
-        platform: "linux",
-        handler: () =>
-          envOutput({
-            PATH: "/home/linuxbrew/.linuxbrew/bin:/usr/bin",
-            XDG_CURRENT_DESKTOP: "KDE",
-            XDG_SESSION_DESKTOP: "KDE",
-            XDG_SESSION_TYPE: "wayland",
-          }),
-      });
-
-      assert.equal(env.XDG_CURRENT_DESKTOP, "KDE");
-      assert.equal(env.XDG_SESSION_DESKTOP, "KDE");
-      assert.equal(env.XDG_SESSION_TYPE, "wayland");
-    }),
-  );
 });

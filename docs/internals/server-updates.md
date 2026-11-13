@@ -31,7 +31,7 @@ After a commit or rollback the launcher points the unit at the selected runtime 
 reloads the manager, so the next service start runs that version's launcher; the
 protocol check is what makes that safe. Each start after a finished update retries this, because
 a previous reload may have failed, and leaves a unit naming a newer runtime or another
-T3 home alone. A protocol-3 launcher does none of this: its unit keeps naming the
+Fhara home alone. A protocol-3 launcher does none of this: its unit keeps naming the
 runtime that installed it. Until a deferred local upgrade restarts, systemd (before
 daemon-reload) and launchd (before bootstrap) can respawn the old launcher, which
 rejects the state the new installer wrote.

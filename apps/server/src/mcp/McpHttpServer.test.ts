@@ -1599,7 +1599,7 @@ it.effect("lists pull request watch tools only to threads that are not delegated
 );
 
 it.effect(
-  "narrows an OAuth client's modes to the T3-Mode-Limit it sends, and never widens them",
+  "narrows an OAuth client's modes to the Fhara-Mode-Limit it sends, and never widens them",
   () =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -1608,7 +1608,7 @@ it.effect(
           environmentId,
           requestNamespace: "client:linked",
           thread: undefined,
-          client: { sessionId: "linked", label: "T3 Code · laptop", access: "auto" },
+          client: { sessionId: "linked", label: "Fhara · laptop", access: "auto" },
           capabilities: new Set(["orchestration"]),
           issuedAt: 1,
         };
@@ -1681,7 +1681,7 @@ it.effect(
             ]),
           ),
         );
-        /** Starts a thread as the client, with `limit` as T3-Mode-Limit; the HTTP status or the outcome. */
+        /** Starts a thread as the client, with `limit` as Fhara-Mode-Limit; the HTTP status or the outcome. */
         const start = (limit: string | undefined, args: Record<string, string> = {}) =>
           Effect.gen(function* () {
             const headers = {

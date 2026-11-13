@@ -1436,9 +1436,9 @@ export const CODEX_THREAD_CONFIG = {
   "features.concurrent_reasoning_summaries": true,
 } as const;
 
-// T3 waits can block for an hour; keep Codex's MCP timeout above that.
+// Fhara waits can block for an hour; keep Codex's MCP timeout above that.
 const CODEX_T3_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
-// Holds T3 tools Codex must call directly, never from Code Mode. Calls arrive as
+// Holds Fhara tools Codex must call directly, never from Code Mode. Calls arrive as
 // `t3-code-direct.<tool>`; t3McpToolPresentation.ts must keep resolving that form.
 const CODEX_T3_DIRECT_MCP_SERVER = "t3-code-direct";
 const CODEX_DIRECT_ONLY_T3_TOOL = "t3_thread_wait";
@@ -1474,7 +1474,7 @@ function codexThreadRuntimeParams(input: {
       ...(t3Server === undefined
         ? {}
         : {
-            // Override only T3's servers so launch-argument MCP servers survive.
+            // Override only Fhara's servers so launch-argument MCP servers survive.
             "mcp_servers.t3-code": { ...t3Server, disabled_tools: [CODEX_DIRECT_ONLY_T3_TOOL] },
             // Code Mode runs a blocking wait as a nested call, and the model keeps working
             // around it. A second, direct-only registration makes it a plain tool call.
@@ -1557,7 +1557,7 @@ const CODEX_THREAD_ENV_CONFIG_KEY = `shell_environment_policy.set.${PortScanner.
 
 /**
  * One app-server serves every Codex thread on an instance, so each frame is routed to the
- * T3 thread it belongs to. Frames tied to no thread, such as `initialize`, go to the global log.
+ * Fhara thread it belongs to. Frames tied to no thread, such as `initialize`, go to the global log.
  */
 function makeCodexProtocolThreadRouter() {
   const threadIdsByNativeId = new Map<string, ThreadId>();

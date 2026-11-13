@@ -98,7 +98,7 @@ const isLoopbackUrl = (url: string) => {
 };
 
 /**
- * The catalog's machines other than the thread's own, in catalog order, then those only T3
+ * The catalog's machines other than the thread's own, in catalog order, then those only Fhara
  * Connect knows. `links` are the thread environment's; an expired one no longer counts as
  * linked. `connect` is what relay discovery found, and a server reaches a machine there as a
  * browser does, so its Connect address is usable.

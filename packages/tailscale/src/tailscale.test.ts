@@ -102,7 +102,7 @@ function layerMockSpawner(
 }
 
 describe("tailscale", () => {
-  it.effect("does not treat a non-T3 response on the HTTPS probe path as reachable", () =>
+  it.effect("does not treat a non-Fhara response on the HTTPS probe path as reachable", () =>
     Effect.gen(function* () {
       for (const [body, status] of [
         ["<!doctype html><title>Other application</title>", 200],
@@ -119,12 +119,12 @@ describe("tailscale", () => {
             ),
           ),
         );
-        assert.isFalse(reachable, `HTTP ${status} without a T3 descriptor`);
+        assert.isFalse(reachable, `HTTP ${status} without a Fhara descriptor`);
       }
     }),
   );
 
-  it.effect("does not treat another T3 server behind the Serve URL as this server", () =>
+  it.effect("does not treat another Fhara server behind the Serve URL as this server", () =>
     Effect.gen(function* () {
       const answer = (environmentId: string) =>
         HttpClient.make((request) =>
@@ -133,7 +133,7 @@ describe("tailscale", () => {
               request,
               Response.json({
                 environmentId,
-                label: "T3 server",
+                label: "Fhara server",
                 platform: { os: "linux", arch: "x64" },
                 serverVersion: "0.1.9",
                 capabilities: { repositoryIdentity: true },

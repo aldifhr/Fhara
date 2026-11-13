@@ -7,6 +7,7 @@ import * as NodeCrypto from "node:crypto";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as SqlClient from "effect/sql/SqlClient";
+import { beforeEach, vi } from "vite-plus/test";
 
 import {
   decryptChromiumValue,
@@ -14,8 +15,26 @@ import {
   readChromiumCookies,
 } from "./ChromiumCookies.ts";
 import { ChromiumKeyError } from "./ChromiumKeys.ts";
-import { LinuxBrowserSecretPath } from "./LinuxBrowserSecret.ts";
 import { cookieScope } from "./CookieDatabase.ts";
+
+const { getPassword } = vi.hoisted(() => ({
+  getPassword: vi.fn<() => Promise<string | undefined>>(),
+}));
+
+vi.mock("@napi-rs/keyring", () => ({
+  Entry: class {
+    getPassword() {
+      throw new Error("synchronous keychain read");
+    }
+  },
+  AsyncEntry: class {
+    getPassword = getPassword;
+  },
+}));
+
+beforeEach(() => {
+  getPassword.mockReset();
+});
 
 const encryptChromium = (
   prefix: "v10" | "v11",
@@ -107,12 +126,11 @@ describe("readChromiumCookieDatabase", () => {
 
         const error = yield* readChromiumCookies({
           cookieDatabasePath: filename,
-          platform: "linux",
-          linuxSecretApplication: "chromium",
-          keychainService: undefined,
-          keychainAccount: undefined,
-        }).pipe(Effect.provideService(LinuxBrowserSecretPath, undefined), Effect.flip);
-        expect(error.reason).toBe("keychainUnavailable");
+          platform: "darwin",
+          keychainService: "Chrome Safe Storage",
+          keychainAccount: "Chrome",
+        }).pipe(Effect.flip);
+        expect(error.reason).toBe("keychainItemMissing");
 
         yield* Effect.gen(function* () {
           const sql = yield* SqlClient.SqlClient;
@@ -122,7 +140,7 @@ describe("readChromiumCookieDatabase", () => {
           cbcV10: key,
           cbcV11Error: new ChromiumKeyError({ reason: "keychainUnavailable" }),
         };
-        const partial = yield* readChromiumCookieDatabase(filename, keys, "linux");
+        const partial = yield* readChromiumCookieDatabase(filename, keys, "darwin");
         expect(partial.cookies.map((cookie) => cookie.value)).toEqual(["kept"]);
         expect(partial.undecryptable).toBe(1);
 
@@ -131,7 +149,7 @@ describe("readChromiumCookieDatabase", () => {
           yield* sql`delete from cookies where name = 'readable'`;
           yield* sql`update cookies set top_frame_site_key = 'https://top.example'`;
         }).pipe(Effect.provide(NodeSqliteClient.layer({ filename })));
-        const partitioned = yield* readChromiumCookieDatabase(filename, keys, "linux");
+        const partitioned = yield* readChromiumCookieDatabase(filename, keys, "darwin");
         expect(partitioned.cookies).toEqual([]);
         expect(partitioned.undecryptable).toBe(1);
       }).pipe(Effect.provide(NodeServices.layer)),
@@ -260,14 +278,14 @@ describe("readChromiumCookieDatabase", () => {
           ('v11.example', 'v11-cookie', '', ${encryptChromium("v11", boundValue("v11.example", "v11 value"), cbcV11)}, '/', 0, 1, 0, 0)`;
       }).pipe(Effect.provide(NodeSqliteClient.layer({ filename })));
 
-      const complete = yield* readChromiumCookieDatabase(filename, { cbcV10, cbcV11 }, "linux");
+      const complete = yield* readChromiumCookieDatabase(filename, { cbcV10, cbcV11 }, "darwin");
       expect(complete.cookies.map(({ name, value }) => ({ name, value }))).toEqual([
         { name: "v10-cookie", value: "v10 value" },
         { name: "v11-cookie", value: "v11 value" },
       ]);
       expect(complete.undecryptable).toBe(0);
 
-      const v10Only = yield* readChromiumCookieDatabase(filename, { cbcV10 }, "linux");
+      const v10Only = yield* readChromiumCookieDatabase(filename, { cbcV10 }, "darwin");
       expect(v10Only.cookies.map(({ name, value }) => ({ name, value }))).toEqual([
         { name: "v10-cookie", value: "v10 value" },
       ]);
@@ -285,7 +303,7 @@ describe("readChromiumCookieDatabase", () => {
       const filename = `${directory}/Cookies`;
       const cbcV10 = Buffer.from("0123456789abcdef");
       const cbcV11 = Buffer.from("fedcba9876543210");
-      // Some Linux clients encrypted with an empty passphrase (crbug.com/1195256).
+      // Some Chromium clients encrypted with an empty passphrase (crbug.com/1195256).
       const cbcEmpty = NodeCrypto.pbkdf2Sync("", "saltysalt", 1, 16, "sha1");
 
       yield* Effect.gen(function* () {
@@ -309,7 +327,7 @@ describe("readChromiumCookieDatabase", () => {
       const recovered = yield* readChromiumCookieDatabase(
         filename,
         { cbcV10, cbcV11, cbcEmpty },
-        "linux",
+        "win32",
       );
       expect(recovered.cookies.map(({ name, value }) => ({ name, value }))).toEqual([
         { name: "empty-v10", value: "empty v10 value" },
@@ -317,13 +335,13 @@ describe("readChromiumCookieDatabase", () => {
       ]);
       expect(recovered.undecryptable).toBe(0);
 
-      const noV11 = yield* readChromiumCookieDatabase(filename, { cbcV10, cbcEmpty }, "linux");
+      const noV11 = yield* readChromiumCookieDatabase(filename, { cbcV10, cbcEmpty }, "win32");
       expect(noV11.cookies.map(({ name }) => name)).toEqual(["empty-v10"]);
       expect(noV11.undecryptableHosts).toEqual(["ev11.example"]);
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 
-  it.effect("treats unversioned encrypted values as legacy plaintext on macOS and Linux", () =>
+  it.effect("treats unversioned encrypted values as legacy plaintext on macOS", () =>
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const directory = yield* fileSystem.makeTempDirectoryScoped({
@@ -349,12 +367,9 @@ describe("readChromiumCookieDatabase", () => {
       }).pipe(Effect.provide(NodeSqliteClient.layer({ filename })));
 
       const mac = yield* readChromiumCookieDatabase(filename, { cbcV10: key }, "darwin");
-      const linux = yield* readChromiumCookieDatabase(filename, { cbcV10: key }, "linux");
 
       expect(mac.cookies[0]?.value).toBe("legacy cleartext");
       expect(mac.undecryptable).toBe(0);
-      expect(linux.cookies[0]?.value).toBe("legacy cleartext");
-      expect(linux.undecryptable).toBe(0);
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 

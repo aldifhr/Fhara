@@ -91,7 +91,7 @@ Unlinking on the linking side only forgets the token.
   thread or project the call names is checked where it lives. A tool that acts
   as the calling thread itself cannot take a linked environment.
 - **Every forwarded call carries the calling agent's modes** in
-  `T3-Mode-Limit`, which the receiving `/mcp` only ever narrows the client's
+  `Fhara-Mode-Limit`, which the receiving `/mcp` only ever narrows the client's
   approved access with. A plan-mode agent therefore cannot start full-access
   work through a full-access link.
 - **A descriptor's environment id filters addresses; it does not prove
@@ -142,7 +142,7 @@ also what keeps restart recovery from treating them as abandoned provider work.
 The link is routing, not isolation: an agent the link starts runs as the
 receiving environment's user. **A full-access link is therefore not fenced**:
 its agents can already do anything that user can, so the fence would only stop
-T3's own tools. Its work still carries `linkOrigin`, so clients show where it
+Fhara's own tools. Its work still carries `linkOrigin`, so clients show where it
 came from. A stamp without the access, from before it was recorded, is fenced.
 
 ## Hosted web is a client

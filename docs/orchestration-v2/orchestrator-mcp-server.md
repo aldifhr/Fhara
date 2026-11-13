@@ -2,21 +2,21 @@
 
 ## Purpose
 
-T3 exposes V2 orchestration through its app-owned MCP endpoint. A provider
+Fhara exposes V2 orchestration through its app-owned MCP endpoint. A provider
 agent can use this endpoint to:
 
 - create an app-owned sub-agent on any supported provider instance;
 - wait for or poll the sub-agent's durable result;
 - cancel an active delegated task; and
-- create one or more ordinary top-level T3 threads;
+- create one or more ordinary top-level Fhara threads;
 - list a project's threads and incrementally read any thread;
 - rename threads, regenerate titles, and link or unlink pull requests;
 - send or steer follow-up messages;
 - wait for or interrupt ordinary thread runs; and
 - schedule recurring work that runs without an active turn.
 
-These are T3 orchestration operations, not provider-native sub-agent APIs.
-Delegated tasks always create a T3 child thread and run. The child receives
+These are Fhara orchestration operations, not provider-native sub-agent APIs.
+Delegated tasks always create a Fhara child thread and run. The child receives
 only the supplied task prompt, plus an optional role instruction supplied in
 the same tool call. Parent conversation history is not copied into the child.
 
@@ -41,8 +41,8 @@ preview toolkit and the orchestration toolkit.
 Before `ProviderSessionManager` opens a new V2 provider session, it asks
 `McpSessionRegistry` for a credential scoped to:
 
-- the T3 environment;
-- the parent T3 thread;
+- the Fhara environment;
+- the parent Fhara thread;
 - the concrete provider instance; and
 - the provider session.
 
@@ -59,7 +59,7 @@ check the `orchestration` capability before reading or mutating state.
 
 ### Codex V2
 
-Codex gets T3's MCP server in each thread's `thread/start`, `thread/resume`,
+Codex gets Fhara's MCP server in each thread's `thread/start`, `thread/resume`,
 and `thread/fork` config, with the provider-session token in an
 `Authorization` header. The same server is registered twice:
 
@@ -150,12 +150,12 @@ provider-specific extensions; those remain in flavors such as Grok.
 
 ### Pi V2
 
-T3 keeps a provider-session HTTP bridge even when Pi supports native MCP.
+Fhara keeps a provider-session HTTP bridge even when Pi supports native MCP.
 `mcp.json` entries override native registrations, and native MCP's default
-60-second request timeout can interrupt long-running T3 tools. The bridge owns
+60-second request timeout can interrupt long-running Fhara tools. The bridge owns
 the injected endpoint and credential and forwards Pi's cancellation signal.
 
-When a provider session credential exists, the adapter writes a T3-owned
+When a provider session credential exists, the adapter writes a Fhara-owned
 extension into the server cache and spawns
 `pi --mode rpc --extension <cache>/pi-t3-mcp-extension.ts` with:
 
@@ -173,12 +173,12 @@ available; optional tools are discovered through Pi's builtin `tool_search`.
 On older Pi or without builtin search, all tools remain directly available.
 The bridge calls the original MCP tool name over HTTP. Follow-up requests send
 `mcp-protocol-version: 2025-06-18`; Effect's MCP transport returns 400
-without it. The first turn of a session also receives the shared T3
+without it. The first turn of a session also receives the shared Fhara
 orchestration instructions.
 
-Pi keeps ownership of native extension discovery. T3 does not replace Pi's
+Pi keeps ownership of native extension discovery. Fhara does not replace Pi's
 `subagent` tool or reproduce Pi's package and project-trust loader. Durable
-delegation goes through the namespaced T3 MCP `delegate_task` tool and the
+delegation goes through the namespaced Fhara MCP `delegate_task` tool and the
 shared orchestration child-thread lifecycle. When Pi's example `subagent`
 extension is installed, the adapter observes its documented `details.results`
 shape and projects task cards with no child thread id. Unknown result shapes
@@ -227,7 +227,7 @@ any catalog model.
 
 ### `delegate_task`
 
-Creates a T3-owned child thread and immediately dispatches the supplied task
+Creates a Fhara-owned child thread and immediately dispatches the supplied task
 prompt.
 
 ```ts
@@ -344,7 +344,7 @@ optional cancellation reason.
 
 ### `create_threads`
 
-Creates between one and twenty ordinary top-level T3 threads:
+Creates between one and twenty ordinary top-level Fhara threads:
 
 ```ts
 type CreateThreadsInput = {
@@ -400,7 +400,7 @@ the environment by thread ID. A deleted thread returns `thread_not_found`. The
 default `messages` view returns user messages, assistant
 messages, and proposed plans. The `activity` view also returns summarized tool,
 reasoning, checkpoint, handoff, and runtime-request items. Large item text is
-bounded and reports whether it was truncated. An agent in a T3 thread that
+bounded and reports whether it was truncated. An agent in a Fhara thread that
 reads without a cursor gets the newest items, and `beforePosition=earlierPosition`
 reads older ones. Client callers (the CLI, linked environments, outside MCP
 clients) start at the oldest item instead, because the CLI and linked

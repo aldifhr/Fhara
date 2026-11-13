@@ -11,9 +11,6 @@ import {
   type DesktopSnapShotShortcutAvailability,
   type DesktopSnapShotState,
   DesktopSnapShotSetupAction,
-  type DesktopCaptureConfigRequest,
-  type DesktopCaptureConfigPreview,
-  type DesktopCaptureConfigApplied,
   type ClientSettings,
   type SnapShotModifier,
   type SnapShotModifierPairShortcut,
@@ -45,29 +42,6 @@ import { startGlobalShiftShortcutProcess } from "./GlobalShiftShortcutProcess.ts
 import { startMacModifierPairShortcutProcess } from "./MacModifierPairShortcutProcess.ts";
 import { activeWindow, type ActiveWindow } from "./ActiveWindow.ts";
 import { captureMacWindowSnapshot, type MacSnapShotSource } from "./MacSnapShot.ts";
-import type { LinuxCaptureFeedback, LinuxWindowMetadata } from "./LinuxSnapShot.ts";
-import { niriSocketPath } from "./NiriSnapShot.ts";
-import { CaptureShortcutConfig, niriCaptureConfigPath } from "./CaptureShortcutConfig.ts";
-import type { PortalCaptureShortcut } from "./PortalCaptureShortcut.ts";
-import {
-  CaptureSetupRequiredError,
-  isGnomeCaptureSession,
-  niriCaptureBinding,
-  portalShortcutTrigger,
-} from "./linuxCaptureSession.ts";
-import {
-  HyprlandCaptureSetup,
-  HYPRLAND_CAPTURE_EXECUTABLE,
-  isHyprlandCaptureSession,
-  hyprlandCaptureShortcut,
-  type HyprlandCapturePaths,
-} from "./HyprlandSnapShot.ts";
-import {
-  KdeCaptureSetup,
-  KDE_CAPTURE_EXECUTABLE,
-  isKdeCaptureSession,
-  type KdeCapturePaths,
-} from "./KdeSnapShot.ts";
 import {
   captureRegionWindowSnapshot,
   makeRegionSnapShotPool,
@@ -85,33 +59,27 @@ import { showWindowsCaptureOverlay } from "./WindowsCaptureFeedback.ts";
 
 import {
   boundedSnapShotString,
-  isWaylandSession,
   sameSnapShotShortcut,
   toElectronAccelerator,
   snapShotShortcutRegistrationFailureMessage,
   snapShotShortcutSystemConflict,
 } from "./snapShot.ts";
-import * as HostProcess from "@t3tools/shared/HostProcess";
 import { readImageDimensions } from "@t3tools/shared/imageDimensions";
-
-const isCaptureSetupRequiredError = Schema.is(CaptureSetupRequiredError);
 
 const MAX_CAPTURE_WIDTH = 2_560;
 const MAX_CAPTURE_HEIGHT = 1_600;
 const SHORTCUT_COOLDOWN_NS = 200_000_000n;
-const WAYLAND_MODIFIER_PAIR_UNAVAILABLE_MESSAGE =
-  "Modifier-pair shortcuts aren't available in this Wayland session. Choose another shortcut or use Take snapshot from the command palette.";
 const FLASH_ANIMATION_DURATION_MS = 180;
 const FLASH_STATIC_DURATION_MS = 60;
 const FLASH_FRAME_INTERVAL_MS = 16;
 const FLASH_PEAK_OPACITY = 0.08;
 const MAC_SCREEN_CAPTURE_SETTINGS_URL = MAC_PERMISSION_SETTINGS_URLS["screen-recording"];
 const MAC_SCREEN_CAPTURE_PERMISSION_MESSAGE =
-  "Allow Screen Recording in System Settings, then restart T3 Code.";
+  "Allow Screen Recording in System Settings, then restart Fhara.";
 const MAC_ACCESSIBILITY_PERMISSION_MESSAGE =
-  "Allow Accessibility in System Settings, then restart T3 Code.";
+  "Allow Accessibility in System Settings, then restart Fhara.";
 const MAC_BOTH_PERMISSIONS_MESSAGE =
-  "Allow Accessibility and Screen Recording in System Settings, then restart T3 Code.";
+  "Allow Accessibility and Screen Recording in System Settings, then restart Fhara.";
 const MAC_PERMISSION_MESSAGES = new Set([
   MAC_SCREEN_CAPTURE_PERMISSION_MESSAGE,
   MAC_ACCESSIBILITY_PERMISSION_MESSAGE,
@@ -182,8 +150,7 @@ const shortcutFailure = (cause: unknown) => new SnapShotShortcutError({ cause })
 
 function captureFailure(cause: unknown, captureId?: string): DesktopSnapShotError {
   if (isDesktopSnapShotError(cause)) return cause;
-  const operation = isCaptureSetupRequiredError(cause) ? "setup-required" : "capture";
-  return new DesktopSnapShotError({ operation, captureId, cause });
+  return new DesktopSnapShotError({ operation: "capture", captureId, cause });
 }
 
 export class DesktopSnapShot extends Context.Service<
@@ -196,13 +163,6 @@ export class DesktopSnapShot extends Context.Service<
     readonly setup: (
       action: DesktopSnapShotSetupAction,
     ) => Effect.Effect<void, DesktopSnapShotSetupError>;
-    readonly previewConfig: (
-      request: DesktopCaptureConfigRequest,
-      selectedPath?: string,
-    ) => Effect.Effect<DesktopCaptureConfigPreview, DesktopSnapShotSetupError>;
-    readonly applyConfig: (
-      previewId: string,
-    ) => Effect.Effect<DesktopCaptureConfigApplied, DesktopSnapShotSetupError>;
     readonly checkShortcut: (
       shortcut: SnapShotShortcut,
     ) => Effect.Effect<DesktopSnapShotShortcutAvailability>;
@@ -225,10 +185,7 @@ export class DesktopSnapShot extends Context.Service<
 export class DesktopSnapShotSetupError extends Schema.TaggedError<DesktopSnapShotSetupError>()(
   "DesktopSnapShotSetupError",
   {
-    action: Schema.Union([
-      DesktopSnapShotSetupAction,
-      Schema.Literals(["preview-config", "apply-config"]),
-    ]),
+    action: DesktopSnapShotSetupAction,
     reason: Schema.Literals(["unsupported-session", "setup-failed", "shortcut-permissions"]),
     step: Schema.optional(Schema.Literals(["find-window", "capture-window"])),
     status: Schema.optional(Schema.Literals(["missing", "timed-out", "exited", "failed"])),
@@ -259,28 +216,9 @@ export class DesktopSnapShotSetupError extends Schema.TaggedError<DesktopSnapSho
         ? `${summary} ${failure}`
         : `${summary} ${failure} macOS grants Screen Recording and Accessibility to each app separately. In System Settings, open Privacy & Security and check that "${this.appName}" is allowed for both.`;
     }
-    if (this.action === "preview-config" || this.action === "apply-config") {
-      if (this.reason === "unsupported-session")
-        return "Config setup requires a Niri or Hyprland session.";
-      return this.action === "preview-config"
-        ? "Couldn't prepare your capture shortcut changes."
-        : "Couldn't save your capture shortcut.";
-    }
-    const kde = this.action === "install-kde-helper" || this.action === "remove-kde-helper";
-    const hyprland =
-      this.action === "install-hyprland-helper" || this.action === "remove-hyprland-helper";
-    if (this.reason === "unsupported-session")
-      return hyprland
-        ? "Helper setup requires a Hyprland Wayland session outside a sandbox."
-        : kde
-          ? "Helper setup requires a KDE Plasma Wayland session outside a sandbox."
-          : "Extension setup requires a GNOME Wayland session outside a sandbox.";
     if (this.reason === "shortcut-permissions") return "Could not open shortcut permissions.";
-    return hyprland
-      ? "Could not set up Hyprland capture."
-      : kde
-        ? "Could not set up KDE capture."
-        : "Could not set up the GNOME extension.";
+    if (this.reason === "unsupported-session") return "This setup step is not available here.";
+    return "Could not complete the setup step.";
   }
 }
 
@@ -298,8 +236,6 @@ type SnapShotSystemAnimationSettings = Pick<
 >;
 
 function captureMode(platform: NodeJS.Platform): DesktopSnapShotState["mode"] {
-  if (platform === "linux")
-    return isWaylandSession(platform, process.env) ? "portal" : "unavailable";
   return platform === "darwin" || platform === "win32" ? "direct" : "unavailable";
 }
 
@@ -355,11 +291,9 @@ async function iconDataUrl(
 
 function snapShotAppName(
   active: ActiveWindow | undefined,
-  linuxWindow: LinuxWindowMetadata | undefined,
   sourceName: string,
 ): string {
-  const appName =
-    active?.owner.name.trim() || linuxWindow?.appName.trim() || sourceName.trim() || "Window";
+  const appName = active?.owner.name.trim() || sourceName.trim() || "Window";
   if (active?.platform !== "windows") return appName;
   return appName.replace(/\.exe$/i, "").trim() || appName;
 }
@@ -450,13 +384,9 @@ async function captureSource({
   flash,
   transition,
   imageTempPath,
-  linuxAppId,
-  kdeCapturePaths,
-  hyprlandCapturePaths,
   accessibilityProcessPool,
   regionSnapShotPool,
   prepareReveal,
-  onLinuxFeedback,
 }: {
   mode: DesktopSnapShotState["mode"];
   captureId: string;
@@ -465,22 +395,15 @@ async function captureSource({
   flash: SnapShotFlash;
   transition: SnapShotTransition;
   imageTempPath: string;
-  linuxAppId: string;
-  kdeCapturePaths: KdeCapturePaths;
-  hyprlandCapturePaths: HyprlandCapturePaths;
   accessibilityProcessPool: AccessibilityProcessPool;
   regionSnapShotPool: RegionSnapShotPool;
   prepareReveal: () => Promise<void>;
-  onLinuxFeedback: (feedback: LinuxCaptureFeedback) => void;
 }) {
   let active: ActiveWindow | undefined;
-  let linuxWindow: LinuxWindowMetadata | undefined;
-  let linuxFeedback: LinuxCaptureFeedback | undefined;
-  let linuxActivationFailure: { readonly cause: unknown } | undefined;
-  const destinationWindow =
+  const destinationWindowBounds = (
     Electron.BrowserWindow.getFocusedWindow() ??
-    Electron.BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
-  const destinationWindowBounds = destinationWindow?.getBounds();
+    Electron.BrowserWindow.getAllWindows().find((window) => !window.isDestroyed())
+  )?.getBounds();
   {
     const revealPreparation =
       platform === "win32" ? prepareReveal().catch(() => undefined) : Promise.resolve();
@@ -511,53 +434,9 @@ async function captureSource({
         snapShotThumbnailSize(active),
       ));
     } else {
-      const { captureLinuxWindow } = await import("./LinuxSnapShot.ts");
-      const snapshot = await captureLinuxWindow(
-        linuxAppId,
-        {
-          flash: settings.snapShotFlash,
-          animate:
-            settings.snapShotAnimations &&
-            shouldAnimateSnapShot(Electron.systemPreferences.getAnimationSettings()),
-        },
-        kdeCapturePaths,
-        hyprlandCapturePaths,
-      );
-      if (snapshot) {
-        linuxFeedback = snapshot.feedback;
-        if (linuxFeedback) onLinuxFeedback(linuxFeedback);
-        linuxWindow = snapshot.window;
-        source = { name: linuxWindow?.title || "Active window" };
-        png = snapshot.png;
-      } else {
-        const [selected] = await Electron.desktopCapturer.getSources({
-          types: ["window", "screen"],
-          thumbnailSize: snapShotThumbnailSize(active),
-          fetchWindowIcons: true,
-        });
-        if (!selected || selected.thumbnail.isEmpty()) {
-          throw new DesktopSnapShotError({
-            operation: "no-window-selected",
-            captureId,
-          });
-        }
-        source = selected;
-        png = selected.thumbnail.toPNG();
-      }
+      throw new DesktopSnapShotError({ operation: "unsupported", captureId });
     }
-    const accessibleIdentity = active
-      ? active
-      : linuxWindow?.processId
-        ? {
-            title: linuxWindow.title,
-            bounds: linuxWindow.bounds,
-            ...(linuxWindow.clientBounds ? { clientBounds: linuxWindow.clientBounds } : {}),
-            owner: { processId: linuxWindow.processId },
-            ...(linuxWindow.accessibilityBoundsReliable === false
-              ? { accessibilityBoundsReliable: false }
-              : {}),
-          }
-        : undefined;
+    const accessibleIdentity = active;
     const accessibilityRead =
       accessibleIdentity && settings.snapShotIncludeAccessibility
         ? accessibilityProcessPool.read({
@@ -572,15 +451,7 @@ async function captureSource({
     }
     const contextPromise = accessibilityRead?.result ?? Promise.resolve(undefined);
     await revealPreparation;
-    if (linuxFeedback && destinationWindow && !destinationWindow.isDestroyed()) {
-      if (destinationWindow.isMinimized()) destinationWindow.restore();
-      if (!destinationWindow.isVisible()) destinationWindow.show();
-      await linuxFeedback.activate(destinationWindow.getTitle()).catch((cause: unknown) => {
-        linuxActivationFailure = { cause };
-      });
-    }
     const animationStarted =
-      linuxFeedback?.animationStarted ??
       (await showCaptureFeedback(
         transition,
         flash,
@@ -594,8 +465,6 @@ async function captureSource({
     return {
       source,
       active,
-      linuxWindow,
-      linuxActivationFailure,
       contextPromise,
       animationStarted,
       png,
@@ -698,8 +567,6 @@ async function showCaptureFeedback(
   platform: NodeJS.Platform,
   destinationWindowBounds?: Electron.Rectangle,
 ): Promise<boolean> {
-  // Wayland does not let this client position overlays on another app's window.
-  if (platform === "linux") return false;
   const bounds = snapShotFlashBounds(active, platform);
   const animationsEnabled =
     settings.snapShotAnimations &&
@@ -778,41 +645,8 @@ export const make = Effect.gen(function* () {
   >();
   const runPromise = Effect.runPromiseWith(context);
   const captureDirectory = path.join(environment.stateDir, "snap-shots");
-  const linuxAppId = environment.linuxDesktopEntryName.replace(/\.desktop$/, "");
-  const home = yield* HostProcess.HomeDirectory;
-  // Shell discovery can replace XDG_CURRENT_DESKTOP after startup, so read the live env per state.
-  const hostEnv = yield* HostProcess.Environment;
   let shortcutVerified = false;
-  const gnomeSetupPaths = {
-    bundle: environment.isPackaged
-      ? path.join(environment.resourcesPath, "gnome-extension")
-      : path.join(environment.appRoot, "apps/desktop/gnome-extension"),
-    dataHome: path.dirname(environment.linuxApplicationsDir),
-  };
-  const kdeCapturePaths = {
-    bundle: environment.isPackaged
-      ? path.join(environment.resourcesPath, "kde-capture", KDE_CAPTURE_EXECUTABLE)
-      : path.join(
-          environment.appRoot,
-          "native/kde-snap-shot/target/release",
-          KDE_CAPTURE_EXECUTABLE,
-        ),
-    dataHome: path.dirname(environment.linuxApplicationsDir),
-  };
-  const hasGnomeSetup = () =>
-    captureMode(environment.platform) === "portal" && isGnomeCaptureSession(process.env);
-  const hyprlandCapturePaths = {
-    bundle: environment.isPackaged
-      ? path.join(environment.resourcesPath, "hyprland-capture", HYPRLAND_CAPTURE_EXECUTABLE)
-      : path.join(
-          environment.appRoot,
-          "native/hyprland-snap-shot/target/release",
-          HYPRLAND_CAPTURE_EXECUTABLE,
-        ),
-    dataHome: path.dirname(environment.linuxApplicationsDir),
-  };
   const shiftShortcutWorkerPath = path.join(__dirname, "snapShot", "GlobalShiftShortcutWorker.cjs");
-  const shortcutConfig = new CaptureShortcutConfig(home);
   const accessibilityWorkerPath = path.join(
     __dirname,
     "snapShot",
@@ -824,7 +658,6 @@ export const make = Effect.gen(function* () {
   );
   let registeredAccelerator: string | undefined;
   let initialized = false;
-  let portalShortcut: PortalCaptureShortcut | undefined;
   let shortcutGeneration = 0;
   let shortcutSuppressed = false;
   let lastShortcutAt: bigint | undefined;
@@ -836,21 +669,9 @@ export const make = Effect.gen(function* () {
     showWindow: showCaptureWindow,
     waitForCompositorFrame: environment.platform === "win32",
     // Transparent Windows surfaces must not resize while their compositor animation is running.
-    boundOverlayToCaptureDisplays: environment.platform !== "linux",
-    alwaysOnTopLevel: environment.platform === "linux" ? undefined : "pop-up-menu",
+    boundOverlayToCaptureDisplays: true,
+    alwaysOnTopLevel: "pop-up-menu",
   });
-  let linuxFeedback: { id: string; feedback: LinuxCaptureFeedback } | undefined;
-  const closeLinuxFeedback = (id?: string) => {
-    if (!linuxFeedback || (id !== undefined && linuxFeedback.id !== id)) return;
-    linuxFeedback.feedback.close();
-    linuxFeedback = undefined;
-  };
-  const completeLinuxFeedback = async (id: string) => {
-    if (linuxFeedback?.id !== id) return;
-    const pending = linuxFeedback;
-    await pending.feedback.complete().catch(() => undefined);
-    if (linuxFeedback === pending) linuxFeedback = undefined;
-  };
 
   const startPairShortcutProcess = (
     modifier: SnapShotModifier,
@@ -863,8 +684,6 @@ export const make = Effect.gen(function* () {
 
   const releaseShortcut = () => {
     shortcutGeneration++;
-    portalShortcut?.close();
-    portalShortcut = undefined;
     if (registeredAccelerator) {
       Electron.globalShortcut.unregister(registeredAccelerator);
       registeredAccelerator = undefined;
@@ -898,7 +717,6 @@ export const make = Effect.gen(function* () {
     );
 
   const discardCapture = Effect.fn("desktop.snapShot.discardCapture")(function* (id: string) {
-    closeLinuxFeedback(id);
     transition.dismiss(id);
     yield* Effect.forEach(
       [`${id}.png`, `${id}.tmp.png`, `${id}.json`, `${id}.json.tmp`],
@@ -919,7 +737,6 @@ export const make = Effect.gen(function* () {
 
     return yield* Effect.gen(function* () {
       // Retire feedback before capture so rapid captures cannot photograph the previous overlay.
-      closeLinuxFeedback();
       flash.dispose();
       transition.dispose();
       yield* fileSystem.makeDirectory(captureDirectory, { recursive: true });
@@ -934,25 +751,13 @@ export const make = Effect.gen(function* () {
             flash,
             transition,
             imageTempPath,
-            linuxAppId,
-            kdeCapturePaths,
-            hyprlandCapturePaths,
             accessibilityProcessPool,
             regionSnapShotPool,
             prepareReveal: () => runPromise(desktopWindow.prepareCaptureReveal),
-            onLinuxFeedback: (feedback) => {
-              linuxFeedback = { id, feedback };
-            },
           }),
         catch: (cause) => captureFailure(cause, id),
       });
       const capturedAt = yield* DateTime.now.pipe(Effect.map(DateTime.formatIso));
-      if (snapshot.linuxActivationFailure) {
-        yield* Effect.logWarning(
-          "The compositor could not activate T3 Code after the snapshot",
-          snapshot.linuxActivationFailure.cause,
-        );
-      }
       if (snapshot.animationStarted) {
         yield* emit({ type: "started", id: id as DesktopSnapShotId });
       } else {
@@ -965,7 +770,7 @@ export const make = Effect.gen(function* () {
   const persistCapture = Effect.fn("desktop.snapShot.persistCapture")(function* (
     capture: Effect.Success<ReturnType<typeof prepareCapture>>,
   ) {
-    const { id, capturedAt, source, active, linuxWindow, contextPromise, png, imageTempReady } =
+    const { id, capturedAt, source, active, contextPromise, png, imageTempReady } =
       capture;
     const imagePath = path.join(captureDirectory, `${id}.png`);
     const imageTempPath = path.join(captureDirectory, `${id}.tmp.png`);
@@ -977,7 +782,7 @@ export const make = Effect.gen(function* () {
         iconDataUrl(source, active, environment.platform),
       );
       const appIdentifier = boundedSnapShotString(
-        active?.platform === "macos" ? active.owner.bundleId : linuxWindow?.appIdentifier,
+        active?.platform === "macos" ? active.owner.bundleId : undefined,
         255,
       );
       const pending = yield* decodePendingCapture({
@@ -989,11 +794,11 @@ export const make = Effect.gen(function* () {
           kind: "snap-shot",
           capturedAt,
           appName:
-            boundedSnapShotString(snapShotAppName(active, linuxWindow, source.name), 255) ??
+            boundedSnapShotString(snapShotAppName(active, source.name), 255) ??
             "Window",
           windowTitle:
             boundedSnapShotString(
-              active?.title.trim() || linuxWindow?.title.trim() || source.name,
+              active?.title.trim() || source.name,
               1_000,
             ) ?? "",
           ...(accessibilityContext?.accessibleText
@@ -1064,22 +869,7 @@ export const make = Effect.gen(function* () {
     if (mode === "unavailable") {
       return { available: false, message: "SnapShots are not supported on this platform." };
     }
-    if (mode === "portal" && niriSocketPath()) {
-      return {
-        available: false,
-        message: "Configure the capture shortcut in your Niri config, not in T3 Code.",
-      };
-    }
-    if (mode === "portal" && isHyprlandCaptureSession()) {
-      return {
-        available: false,
-        message: "Change the capture binding in your Hyprland config, then save it.",
-      };
-    }
     if (isModifierPairShortcut(shortcut)) {
-      if (mode === "portal") {
-        return { available: false, message: WAYLAND_MODIFIER_PAIR_UNAVAILABLE_MESSAGE };
-      }
       const available = yield* Effect.tryPromise({
         try: () =>
           startPairShortcutProcess(
@@ -1102,23 +892,6 @@ export const make = Effect.gen(function* () {
     }
     const systemConflict = snapShotShortcutSystemConflict(shortcut);
     if (systemConflict) return { available: false, message: systemConflict };
-    if (mode === "portal") {
-      return yield* Effect.try({
-        try: () => portalShortcutTrigger(shortcut),
-        catch: shortcutFailure,
-      }).pipe(
-        Effect.match({
-          onSuccess: () => ({
-            available: true,
-            message: "Your desktop will confirm this shortcut when you save it.",
-          }),
-          onFailure: (error) => ({
-            available: false,
-            message: error.cause instanceof Error ? error.cause.message : "Unsupported shortcut.",
-          }),
-        }),
-      );
-    }
     const accelerator = toElectronAccelerator(shortcut);
     const available =
       registeredAccelerator === accelerator
@@ -1156,23 +929,13 @@ export const make = Effect.gen(function* () {
     }
     if (!settings.snapShotEnabled || !settings.snapShotAnimations || mode === "unavailable") {
       transition.dispose();
-      closeLinuxFeedback();
     }
-    // Unrelated settings saves must not uninstall the keyboard hook or drop an approved portal session.
+    // Unrelated settings saves must not uninstall the keyboard hook or drop the registered shortcut.
     const shortcutInputsChanged =
       settings.snapShotEnabled !== previousSettings.snapShotEnabled ||
       settings.snapShotIncludeAccessibility !== previousSettings.snapShotIncludeAccessibility ||
       !sameSnapShotShortcut(shortcut, previousSettings.snapShotShortcut);
-    const portalShortcutUnchanged =
-      portalShortcut !== undefined &&
-      settings.snapShotEnabled &&
-      previousSettings.snapShotEnabled &&
-      (isHyprlandCaptureSession() ||
-        (!isModifierPairShortcut(shortcut) &&
-          !isModifierPairShortcut(previousSettings.snapShotShortcut) &&
-          toElectronAccelerator(shortcut) ===
-            toElectronAccelerator(previousSettings.snapShotShortcut)));
-    if (!forceShortcut && (portalShortcutUnchanged || (initialized && !shortcutInputsChanged))) {
+    if (!forceShortcut && (initialized && !shortcutInputsChanged)) {
       yield* Ref.update(stateRef, (state) => ({ ...state, shortcut }));
       return;
     }
@@ -1191,11 +954,7 @@ export const make = Effect.gen(function* () {
         shortcutRegistered: false,
         shortcutMessage: null,
         message:
-          mode === "unavailable"
-            ? environment.platform === "linux"
-              ? "SnapShots require a Wayland session. X11 capture is not supported."
-              : "SnapShots are not supported on this platform."
-            : null,
+          mode === "unavailable" ? "SnapShots are not supported on this platform." : null,
       });
       return;
     }
@@ -1215,105 +974,6 @@ export const make = Effect.gen(function* () {
       });
       return;
     }
-    if (mode === "portal" && niriSocketPath()) {
-      const registered = yield* Effect.tryPromise({
-        try: async () => {
-          const { startNiriCaptureShortcut } = await import("./NiriCaptureShortcut.ts");
-          return startNiriCaptureShortcut(linuxAppId, onCurrentShortcut, () => {
-            void runPromise(
-              setShortcutFailure("The Niri capture endpoint disconnected. Restart T3 Code."),
-            ).catch(() => undefined);
-          });
-        },
-        catch: shortcutFailure,
-      }).pipe(
-        Effect.tap((stop) =>
-          Effect.sync(() => {
-            stopShiftShortcut = stop;
-          }),
-        ),
-        Effect.as(true),
-        Effect.orElseSucceed(() => false),
-      );
-      yield* Ref.set(stateRef, {
-        mode,
-        linuxBackend: "niri",
-        shortcut,
-        shortcutRegistered: false,
-        shortcutBinding: niriCaptureBinding(linuxAppId),
-        shortcutConfigPath: niriCaptureConfigPath(home),
-        shortcutActionRegistered: registered,
-        shortcutMessage: registered
-          ? "Set up the shortcut to add it to your Niri config."
-          : "Could not start the Niri capture endpoint. Another T3 Code instance may be using it.",
-        message: null,
-      });
-      return;
-    }
-    const hyprland = mode === "portal" && isHyprlandCaptureSession();
-    if (mode === "portal" && isModifierPairShortcut(shortcut) && !hyprland) {
-      yield* Ref.set(stateRef, {
-        mode,
-        shortcut,
-        shortcutRegistered: false,
-        shortcutMessage: WAYLAND_MODIFIER_PAIR_UNAVAILABLE_MESSAGE,
-        message: null,
-      });
-      return;
-    }
-    if (mode === "portal" && (!isModifierPairShortcut(shortcut) || hyprland)) {
-      yield* Ref.set(stateRef, {
-        mode,
-        shortcut,
-        shortcutRegistered: false,
-        shortcutMessage: null,
-        message: null,
-      });
-      yield* Effect.tryPromise({
-        try: async () => {
-          const { PortalCaptureShortcut } = await import("./PortalCaptureShortcut.ts");
-          return new PortalCaptureShortcut(
-            linuxAppId,
-            isModifierPairShortcut(shortcut)
-              ? {
-                  key: "2",
-                  ctrlKey: true,
-                  modKey: false,
-                  altKey: false,
-                  shiftKey: true,
-                  metaKey: false,
-                }
-              : shortcut,
-            onCurrentShortcut,
-            () => {
-              if (generation !== shortcutGeneration) return;
-              shortcutVerified = false;
-              void runPromise(emit({ type: "shortcut-changed" })).catch(() => undefined);
-            },
-            undefined,
-            hyprland,
-          );
-        },
-        catch: shortcutFailure,
-      }).pipe(
-        Effect.tap((registration) =>
-          Effect.sync(() => {
-            portalShortcut = registration;
-          }),
-        ),
-        Effect.catch((error) =>
-          Ref.update(stateRef, (state) => ({
-            ...state,
-            shortcutMessage:
-              error.cause instanceof Error
-                ? error.cause.message
-                : "Could not connect to your desktop's shortcut service.",
-          })),
-        ),
-      );
-      return;
-    }
-
     let registered = false;
     if (isModifierPairShortcut(shortcut)) {
       registered = yield* Effect.tryPromise({
@@ -1440,36 +1100,6 @@ export const make = Effect.gen(function* () {
         }),
       );
       return;
-    } else if (action === "install-kde-helper" || action === "remove-kde-helper") {
-      if (captureMode(environment.platform) !== "portal" || !isKdeCaptureSession())
-        return yield* new DesktopSnapShotSetupError({
-          action,
-          reason: "unsupported-session",
-        });
-      yield* Effect.tryPromise({
-        try: () => new KdeCaptureSetup(kdeCapturePaths).perform(action),
-        catch: (error) =>
-          new DesktopSnapShotSetupError({
-            action,
-            reason: "setup-failed",
-            cause: error,
-          }),
-      });
-    } else if (action === "install-hyprland-helper" || action === "remove-hyprland-helper") {
-      if (captureMode(environment.platform) !== "portal" || !isHyprlandCaptureSession())
-        return yield* new DesktopSnapShotSetupError({
-          action,
-          reason: "unsupported-session",
-        });
-      yield* Effect.tryPromise({
-        try: () => new HyprlandCaptureSetup(hyprlandCapturePaths).perform(action),
-        catch: (error) =>
-          new DesktopSnapShotSetupError({
-            action,
-            reason: "setup-failed",
-            cause: error,
-          }),
-      });
     } else if (action === "allow-screen-recording" || action === "allow-accessibility") {
       if (environment.platform !== "darwin")
         return yield* new DesktopSnapShotSetupError({
@@ -1491,47 +1121,9 @@ export const make = Effect.gen(function* () {
         action === "allow-accessibility" ? "accessibility" : "screen-recording",
         owner,
       );
-    } else if (action !== "retry-shortcut") {
-      if (!hasGnomeSetup())
-        return yield* new DesktopSnapShotSetupError({
-          action,
-          reason: "unsupported-session",
-        });
-      yield* Effect.tryPromise({
-        try: async () => {
-          const { GnomeCaptureSetup } = await import("./GnomeCaptureSetup.ts");
-          const setup = new GnomeCaptureSetup(gnomeSetupPaths);
-          try {
-            await setup.perform(action);
-          } finally {
-            setup.close();
-          }
-        },
-        catch: (error) =>
-          new DesktopSnapShotSetupError({
-            action,
-            reason: "setup-failed",
-            cause: error,
-          }),
-      });
     }
     if (action === "retry-shortcut") {
-      const currentPortal = portalShortcut;
-      if (currentPortal?.hasSession && !currentPortal.state.shortcutPending) {
-        yield* Effect.tryPromise({
-          try: () => currentPortal.configure(),
-          catch: shortcutFailure,
-        }).pipe(
-          Effect.mapError(
-            (error) =>
-              new DesktopSnapShotSetupError({
-                action,
-                reason: "shortcut-permissions",
-                cause: error.cause,
-              }),
-          ),
-        );
-      } else yield* applySettings(yield* Ref.get(settingsRef), null, true);
+      yield* applySettings(yield* Ref.get(settingsRef), null, true);
     }
   }, configurationMutex.withPermits(1));
 
@@ -1540,60 +1132,10 @@ export const make = Effect.gen(function* () {
       releaseShortcut();
       flash.dispose();
       transition.dispose();
-      closeLinuxFeedback();
       accessibilityProcessPool.close();
       regionSnapShotPool.close();
     }),
   );
-
-  const configDesktop = Effect.fn("desktop.snapShot.configDesktop")(function* (
-    action: "preview-config" | "apply-config",
-  ) {
-    if (captureMode(environment.platform) === "portal") {
-      if (niriSocketPath()) return "niri" as const;
-      if (isHyprlandCaptureSession()) return "hyprland" as const;
-    }
-    return yield* new DesktopSnapShotSetupError({
-      action,
-      reason: "unsupported-session",
-    });
-  });
-  const previewConfig = Effect.fn("desktop.snapShot.previewConfig")(function* (
-    request: DesktopCaptureConfigRequest,
-    selectedPath?: string,
-  ) {
-    const desktop = yield* configDesktop("preview-config");
-    return yield* Effect.tryPromise({
-      try: async () => {
-        const configPath =
-          selectedPath ??
-          (desktop === "niri"
-            ? niriCaptureConfigPath(home)
-            : (await hyprlandCaptureShortcut(linuxAppId, home)).shortcutConfigPath);
-        return shortcutConfig.preview({ desktop, path: configPath, appId: linuxAppId }, request);
-      },
-      catch: (cause) =>
-        new DesktopSnapShotSetupError({
-          action: "preview-config",
-          reason: "setup-failed",
-          cause,
-        }),
-    });
-  });
-  const applyConfig = Effect.fn("desktop.snapShot.applyConfig")(function* (previewId: string) {
-    const desktop = yield* configDesktop("apply-config");
-    const result = yield* Effect.tryPromise({
-      try: () => shortcutConfig.apply(previewId, desktop),
-      catch: (cause) =>
-        new DesktopSnapShotSetupError({
-          action: "apply-config",
-          reason: "setup-failed",
-          cause,
-        }),
-    });
-    if (result.backupPath) shortcutVerified = false;
-    return result;
-  });
 
   return DesktopSnapShot.of({
     initialize: configurationMutex.withPermits(1)(
@@ -1610,112 +1152,30 @@ export const make = Effect.gen(function* () {
     configure,
     requestPermissions,
     setup,
-    previewConfig,
-    applyConfig,
     state: Ref.get(stateRef).pipe(
       Effect.flatMap((state) =>
-        state.mode === "portal"
-          ? Effect.tryPromise({
-              try: async () => {
-                const { getLinuxCaptureSupport } = await import("./LinuxSnapShot.ts");
-                return getLinuxCaptureSupport(linuxAppId);
-              },
-              catch: (cause) => new DesktopSnapShotError({ operation: "unsupported", cause }),
-            }).pipe(
-              Effect.map((support) => ({ ...state, ...support })),
-              Effect.catch((error) =>
-                Effect.succeed({
-                  ...state,
-                  message:
-                    error.cause instanceof Error
-                      ? error.cause.message
-                      : "Could not check desktop capture support. Check your desktop session and try again.",
-                }),
-              ),
-            )
-          : environment.platform === "darwin"
-            ? Effect.gen(function* () {
-                const settings = yield* Ref.get(settingsRef);
-                const macPermissions = currentMacPermissions();
-                const message = settings.snapShotEnabled
-                  ? macPermissionMessage(macPermissions, settings.snapShotIncludeAccessibility)
-                  : null;
-                const recovered =
-                  message === null &&
-                  state.message !== null &&
-                  MAC_PERMISSION_MESSAGES.has(state.message)
-                    ? yield* configurationMutex
-                        .withPermits(1)(applySettings(settings, null, true))
-                        .pipe(Effect.andThen(Ref.get(stateRef)))
-                    : state;
-                return { ...recovered, macPermissions, ...(message ? { message } : {}) };
-              })
-            : Effect.succeed(
-                environment.platform === "win32" ? { ...state, windows: true } : state,
-              ),
+        environment.platform === "darwin"
+          ? Effect.gen(function* () {
+              const settings = yield* Ref.get(settingsRef);
+              const macPermissions = currentMacPermissions();
+              const message = settings.snapShotEnabled
+                ? macPermissionMessage(macPermissions, settings.snapShotIncludeAccessibility)
+                : null;
+              const recovered =
+                message === null &&
+                state.message !== null &&
+                MAC_PERMISSION_MESSAGES.has(state.message)
+                  ? yield* configurationMutex
+                      .withPermits(1)(applySettings(settings, null, true))
+                      .pipe(Effect.andThen(Ref.get(stateRef)))
+                  : state;
+              return { ...recovered, macPermissions, ...(message ? { message } : {}) };
+            })
+          : Effect.succeed(
+              environment.platform === "win32" ? { ...state, windows: true } : state,
+            ),
       ),
-      Effect.flatMap((state) =>
-        Effect.gen(function* () {
-          const linuxDesktop =
-            state.mode === "portal"
-              ? (hostEnv.XDG_CURRENT_DESKTOP ?? "")
-                  .toLowerCase()
-                  .split(":")
-                  .find(
-                    (name) =>
-                      name === "gnome" || name === "kde" || name === "niri" || name === "hyprland",
-                  )
-              : undefined;
-          const gnomeExtension = hasGnomeSetup()
-            ? yield* Effect.promise(async () => {
-                const { GnomeCaptureSetup } = await import("./GnomeCaptureSetup.ts");
-                const setup = new GnomeCaptureSetup(gnomeSetupPaths);
-                try {
-                  return await setup.state();
-                } finally {
-                  setup.close();
-                }
-              })
-            : undefined;
-          const kdeHelper =
-            state.linuxBackend === "kde"
-              ? yield* Effect.promise(() => new KdeCaptureSetup(kdeCapturePaths).state())
-              : undefined;
-          const hyprlandHelper =
-            state.linuxBackend === "hyprland"
-              ? yield* Effect.promise(() => new HyprlandCaptureSetup(hyprlandCapturePaths).state())
-              : undefined;
-          const hyprlandShortcut =
-            state.linuxBackend === "hyprland"
-              ? yield* Effect.promise(() => hyprlandCaptureShortcut(linuxAppId, home))
-              : undefined;
-          return {
-            ...state,
-            ...portalShortcut?.state,
-            ...(linuxDesktop ? { linuxDesktop } : {}),
-            ...(gnomeExtension ? { gnomeExtension } : {}),
-            ...(hyprlandHelper
-              ? {
-                  hyprlandHelper,
-                  linuxFeedbackAvailable:
-                    hyprlandHelper.status === "ready" && hyprlandHelper.feedbackAvailable === true,
-                }
-              : {}),
-            ...hyprlandShortcut,
-            ...(state.linuxBackend === "niri"
-              ? { shortcutConfigPath: niriCaptureConfigPath(home) }
-              : {}),
-            ...(kdeHelper
-              ? {
-                  kdeHelper,
-                  linuxFeedbackAvailable:
-                    kdeHelper.status === "ready" && kdeHelper.feedbackAvailable === true,
-                }
-              : {}),
-            shortcutVerified,
-          };
-        }),
-      ),
+      Effect.map((state) => ({ ...state, shortcutVerified })),
     ),
     checkShortcut,
     setShortcutSuppressed,
@@ -1764,12 +1224,6 @@ export const make = Effect.gen(function* () {
     setAnimationDestination: Effect.fn("DesktopSnapShot.setAnimationDestination")(
       function (id, destination) {
         return Effect.promise(async () => {
-          if (linuxFeedback?.id === id && destination.relativeFrame) {
-            await linuxFeedback.feedback
-              .animateTo(destination.relativeFrame)
-              .catch(() => closeLinuxFeedback(id));
-            return;
-          }
           transition.animateTo(id, destination);
           await transition.waitForLanding(id);
         });
@@ -1777,13 +1231,11 @@ export const make = Effect.gen(function* () {
     ),
     dismissAnimation: Effect.fn("DesktopSnapShot.dismissAnimation")(function (id) {
       return Effect.sync(() => {
-        closeLinuxFeedback(id);
         transition.dismiss(id);
       });
     }),
     acknowledge: Effect.fn("DesktopSnapShot.acknowledge")(function (id) {
       return Effect.promise(async () => {
-        await completeLinuxFeedback(id);
         await transition.complete(id);
       }).pipe(
         Effect.andThen(

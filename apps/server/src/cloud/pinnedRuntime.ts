@@ -323,7 +323,7 @@ const installPinnedRuntime = Effect.fn("cloud.pinned_runtime.ensure_installed")(
     yield* input.validate(paths);
     return paths;
   }
-  // Fhara: never download the upstream T3 Code release (the default source) over the fork.
+  // Fhara: never download the upstream Fhara release (the default source) over the fork.
   // A runtime can still come from an explicit mirror (T3CODE_RELEASE_BASE_URL or managed policy).
   if (input.releaseBaseUrl === undefined || input.releaseBaseUrl.trim().length === 0) {
     return yield* new PinnedRuntimeInstallError({
@@ -557,7 +557,7 @@ const shellLauncherTargets = Effect.fn("cloud.pinned_runtime.shell_launcher_targ
             Effect.map(windowsShimTarget),
             Effect.orElseSucceed(() => undefined),
           )
-        : // Fully resolved, through chained links and a symlinked T3 home alike.
+        : // Fully resolved, through chained links and a symlinked Fhara home alike.
           yield* fs.realPath(launcher).pipe(Effect.orElseSucceed(() => undefined));
     if (target === undefined) continue;
     // A runtime's own entry, on the macOS service PATH or recorded by an earlier prune, is no launcher.
@@ -586,7 +586,7 @@ const shellLauncherTargets = Effect.fn("cloud.pinned_runtime.shell_launcher_targ
 
 /**
  * Resolved executables rather than command lines: a server started through the `t3` symlink
- * shows up as `t3 serve`, possibly from another T3 home that runs this home's runtimes. Windows
+ * shows up as `t3 serve`, possibly from another Fhara home that runs this home's runtimes. Windows
  * has no symlink launcher, and its `t3.cmd` shim runs the absolute path, so command lines do there.
  */
 const runningExecutables = Effect.fn("cloud.pinned_runtime.running_executables")(function* () {
@@ -700,7 +700,7 @@ const selectUnusedRuntimes = Effect.fn("cloud.pinned_runtime.select_unused")(fun
     ...(yield* shellLauncherTargets(input.baseDir)),
     ...input.references,
   ].map(foldCase);
-  // Process executables are resolved, so they name the real path of a symlinked T3 home.
+  // Process executables are resolved, so they name the real path of a symlinked Fhara home.
   const realVersionsDir = yield* fs
     .realPath(versionsDir)
     .pipe(Effect.orElseSucceed(() => versionsDir));

@@ -41,8 +41,8 @@ export const ManagedProviderLimits = Schema.Struct({
 export type ManagedProviderLimits = typeof ManagedProviderLimits.Type;
 
 /**
- * How T3 Code updates itself. `auto` is the default: it checks, and installs only when a user
- * asks. `off` never checks, for machines that get T3 Code through MDM.
+ * How Fhara updates itself. `auto` is the default: it checks, and installs only when a user
+ * asks. `off` never checks, for machines that get Fhara through MDM.
  */
 export const ManagedUpdatesMode = Schema.Literals(["auto", "off"]);
 export type ManagedUpdatesMode = typeof ManagedUpdatesMode.Type;

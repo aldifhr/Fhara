@@ -1,7 +1,7 @@
 # Scenarios
 
 A scenario is an [e2e](https://e2e.com/docs) test that shows one behavior in the real app: a real
-server on its own T3 home, real HTTP and WebSocket, and a real browser on the web client or a
+server on its own Fhara home, real HTTP and WebSocket, and a real browser on the web client or a
 pooled iPhone simulator running the mobile app. The
 dev replay agent stands in for the model, so a run is free and repeatable. Use one as the proof
 for a bug fix: it fails on the base commit and passes on the fix.
@@ -37,7 +37,7 @@ test(
 ```
 
 `screen`, `browser`, `app`, and `expect` are e2e's own. [`t3.ts`](../../scripts/scenarios/t3.ts)
-adds one fixture for what e2e cannot know about T3 Code:
+adds one fixture for what e2e cannot know about Fhara:
 
 - `t3.project(title, files)` creates a git repository and adds it as a project.
 - `t3.thread({ project, title, messages })` starts a thread and plays one replayed turn per
@@ -85,7 +85,7 @@ address. It does not use `localhost`, which some machines resolve to `::1` first
 
 `e2e run --help` lists the rest: `--grep`, `--watch`, `--last-failed`, `--changed-since`.
 
-Run one at a time per checkout: a run recreates the checkout's scenario T3 home and its `.e2e`
+Run one at a time per checkout: a run recreates the checkout's scenario Fhara home and its `.e2e`
 output. Use a second worktree for a second run.
 
 ## Prove a fix

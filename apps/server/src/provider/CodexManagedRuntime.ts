@@ -67,7 +67,7 @@ export const makeCodexManagedRuntime = Effect.fn("makeCodexManagedRuntime")(func
             instanceId: options.instanceId,
             operation: "runtime",
             detail:
-              "Could not prepare the private managed Codex token listener. Restart T3 and retry.",
+              "Could not prepare the private managed Codex token listener. Restart Fhara and retry.",
             cause,
           }),
       ),
@@ -113,7 +113,7 @@ export const makeCodexManagedRuntime = Effect.fn("makeCodexManagedRuntime")(func
           }),
       ),
     );
-    // Ambient CLI overrides cannot redirect a T3-owned token to a different provider.
+    // Ambient CLI overrides cannot redirect a Fhara-owned token to a different provider.
     const environment: NodeJS.ProcessEnv = {
       ...options.environment,
       CODEX_HOME: homePath,

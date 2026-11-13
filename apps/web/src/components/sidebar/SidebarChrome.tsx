@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, PanelLeftCloseIcon, SettingsIcon, Share2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -14,7 +14,6 @@ import {
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
 import { usePullRequestsSupported } from "../../state/environments";
-import { T3Wordmark } from "../T3Wordmark";
 import {
   resolveEnvironmentIdentificationPillLabel,
   resolveSidebarStageBackdropVariant,
@@ -55,6 +54,9 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
     environmentIdentificationMode === "pill"
       ? resolveEnvironmentIdentificationPillLabel(stageLabel)
       : null;
+  const { toggleSidebar } = useSidebar();
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const collapseShortcut = shortcutLabelForCommand(keybindings, "sidebar.toggle");
 
   return (
     <div
@@ -88,6 +90,29 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
             </Badge>
           </div>
         ) : null}
+      </div>
+      <div className="relative z-10 hidden shrink-0 items-center md:flex">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label="Collapse sidebar"
+                className={cn(
+                  "[-webkit-app-region:no-drag]",
+                  backdropVariant !== null && "relative top-auto translate-y-0",
+                )}
+                onClick={toggleSidebar}
+                size="icon-sm"
+                variant={backdropVariant !== null ? "media-navigation" : "ghost"}
+              />
+            }
+          >
+            <PanelLeftCloseIcon className="size-3.5" />
+          </TooltipTrigger>
+          <TooltipPopup side="bottom">
+            Collapse sidebar{collapseShortcut ? ` (${collapseShortcut})` : ""}
+          </TooltipPopup>
+        </Tooltip>
       </div>
     </div>
   );
@@ -179,15 +204,23 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
-    <span className="inline-flex min-w-0 items-baseline gap-1 text-sm font-medium tracking-tight">
-      <T3Wordmark aria-label="T3" className="h-[1cap] w-auto shrink-0" />
+    <span className="inline-flex min-w-0 items-center gap-1.5">
       <span
+        aria-hidden
         className={cn(
-          "truncate [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
-          onBackdrop ? "text-white/70" : "text-muted-foreground",
+          "flex size-5 shrink-0 items-center justify-center rounded-md",
+          onBackdrop ? "bg-white text-black" : "bg-foreground text-background",
         )}
       >
-        Code
+        <Share2Icon strokeWidth={2} className="size-3" />
+      </span>
+      <span
+        className={cn(
+          "truncate text-[15px] font-semibold tracking-tight text-foreground",
+          onBackdrop && "text-white",
+        )}
+      >
+        Fhara
       </span>
     </span>
   );

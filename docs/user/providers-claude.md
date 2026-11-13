@@ -1,6 +1,6 @@
 # Claude
 
-T3 Code uses Claude Code's login and configuration. Start with the default provider
+Fhara uses Claude Code's login and configuration. Start with the default provider
 for one account; [provider setup](./install.md#providers) covers installation and
 shared provider settings.
 
@@ -41,12 +41,12 @@ For presets that differ only in API keys or endpoints, use the instance's
 **Environment variables**. Variable assignments do not belong in **Launch arguments**.
 
 File paths in the `--settings` and `--append-system-prompt-file` launch arguments
-can start with `~` for the home directory of the machine running T3 Code. Any
+can start with `~` for the home directory of the machine running Fhara. Any
 other relative path is read from the thread's project folder, or its worktree.
 
 Claude Code's verbose mode can stay enabled when you use Claude for text generation, including
 thread titles, branch names, commit messages, and pull request descriptions. On a remote connection,
-T3 Code uses the Claude configuration on the connected server.
+Fhara uses the Claude configuration on the connected server.
 
 ## Compact long conversations
 
@@ -74,7 +74,7 @@ over 200,000 tokens. Each Claude provider's settings can override it:
 - **When you return** shows the **Compact** chip described above. This is the default.
 - **Before the cache expires (beta)** tries to compact an idle thread shortly before its
   prompt cache expires, while the history is still cached.
-  The compaction appears in the thread as a `/compact` turn sent by T3 Code.
+  The compaction appears in the thread as a `/compact` turn sent by Fhara.
   If the window is missed, such as when you enable this mode after the cache has
   expired or the server restarts before compaction runs, it falls back to
   **When you return**. Switch the chip to **Keep** to keep the full history for that message.
@@ -112,7 +112,7 @@ row in the thread; open it to see every step.
 ## Claude in Chrome
 
 Claude threads can use the Claude in Chrome extension, which works in your own
-Chrome with its sign-ins. T3 Code sessions load it only when asked: add `--chrome`
+Chrome with its sign-ins. Fhara sessions load it only when asked: add `--chrome`
 to **Launch arguments** in the Claude instance's settings in **Settings > Providers**.
 It applies to sessions that start after you save. Set up the extension as you would
 for Claude Code first; see Claude Code's [Chrome guide](https://code.claude.com/docs/en/chrome).
@@ -138,11 +138,11 @@ If that Claude config directory has a cached Anthropic login, run `/logout` in a
 Claude Code session using that directory before starting the router setup. Cached
 login credentials can conflict with the router token.
 
-Select the model you want in T3 Code. For an OpenRouter model outside the built-in
+Select the model you want in Fhara. For an OpenRouter model outside the built-in
 list, open that Claude instance in **Settings > Providers** and add its full model
 ID with **Add custom model**. Then select it in the chat model picker.
 `ANTHROPIC_DEFAULT_*_MODEL` variables map Claude Code aliases such as `sonnet`; they
-do not replace the explicit model ID selected in T3 Code. Custom models may have
+do not replace the explicit model ID selected in Fhara. Custom models may have
 fewer effort, thinking, or context controls than built-in models.
 
 Verify the model used in OpenRouter's activity dashboard. For current compatibility
