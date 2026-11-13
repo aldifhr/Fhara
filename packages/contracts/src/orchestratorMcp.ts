@@ -1,3 +1,4 @@
+import { AGENT_ROLE_IDS } from "./agentRoles.ts";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
@@ -136,14 +137,22 @@ export const OrchestratorMcpInteractionMode = Schema.Union([
 ]);
 export type OrchestratorMcpInteractionMode = typeof OrchestratorMcpInteractionMode.Type;
 
-export const OrchestratorMcpTaskRole = Schema.Literals([
+/** Task kinds accepted before agent roles existed; no prompt or cap applies. */
+export const ORCHESTRATOR_MCP_LEGACY_TASK_ROLES = [
   "implementation",
   "research",
   "review",
   "design",
   "test",
   "general",
-]);
+] as const;
+export const OrchestratorMcpTaskRole = Schema.Literals([
+  ...AGENT_ROLE_IDS,
+  ...ORCHESTRATOR_MCP_LEGACY_TASK_ROLES,
+]).annotate({
+  description:
+    "Agent role for the child: cto, designer, frontend, backend, qa, reviewer, devops, researcher or support. Read-only roles (cto, designer, reviewer, researcher) run in plan mode.",
+});
 export type OrchestratorMcpTaskRole = typeof OrchestratorMcpTaskRole.Type;
 
 export const OrchestratorMcpDelegatedTaskStatus = Schema.Literals([

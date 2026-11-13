@@ -8,6 +8,7 @@ import {
   type RuntimeMode,
 } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
+import { findRole, type Role } from "../roles/registry.ts";
 
 /** How much a runtime mode allows, narrowest first. */
 export function runtimeModeRank(mode: RuntimeMode): number {
@@ -87,8 +88,31 @@ export function resolveInteractionMode(
     : Effect.succeed(resolved);
 }
 
+/** The agent role a delegation asked for, if it names one of the fixed roles. */
+export function delegatedRole(input: Pick<OrchestratorMcpDelegateTaskInput, "role">): Role | undefined {
+  return input.role === undefined ? undefined : findRole(input.role);
+}
+
+/**
+ * Read-only roles are capped at plan mode, the existing narrowest interaction
+ * mode; write roles keep the requested (or inherited) mode.
+ */
+export function roleInteractionMode(
+  role: Role | undefined,
+  requested: OrchestratorMcpInteractionMode | undefined,
+): OrchestratorMcpInteractionMode | undefined {
+  return role?.readOnly === true ? "plan" : requested;
+}
+
 /** The task as its child receives it, with the role the caller asked for. */
 export function taskPrompt(input: OrchestratorMcpDelegateTaskInput): string {
+  const role = delegatedRole(input);
+  if (role !== undefined) {
+    const scope = role.readOnly
+      ? "You are read-only for this task: do not edit files."
+      : `Only write files matching: ${role.writeScope.join(", ")}.`;
+    return `${role.systemPrompt.trim()}\n\n${scope}\n\n---\n\n${input.task}`;
+  }
   return input.role === undefined || input.role === "general"
     ? input.task
     : `Act as the ${input.role} sub-agent for this task.\n\n${input.task}`;

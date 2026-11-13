@@ -122,6 +122,8 @@ import {
   interactionModeRank,
   resolveInteractionMode,
   resolveRuntimeMode,
+  roleInteractionMode,
+  delegatedRole,
   runtimeModeRank,
   taskPrompt,
 } from "./delegatedTaskModes.ts";
@@ -2516,7 +2518,7 @@ const make = Effect.gen(function* () {
       );
       const interactionMode = yield* resolveInteractionMode(
         parent.thread.interactionMode,
-        input.interactionMode,
+        roleInteractionMode(delegatedRole(input), input.interactionMode),
       );
       let workspaceStrategy: OrchestrationV2ThreadLaunchWorkspaceStrategy | undefined;
       if (input.isolation === "worktree" && !isRetryOfAcceptedDelegation) {
