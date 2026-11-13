@@ -92,12 +92,7 @@ it.each([
   setup();
   await using screen = await render(
     <ToastProvider timeout={0}>
-      <ThreadRelationshipsPanel
-        environmentId={environmentId}
-        threadId={threadId}
-        showLineage
-        showSideChats
-      />
+      <ThreadRelationshipsPanel environmentId={environmentId} threadId={threadId} showLineage />
     </ToastProvider>,
   );
 
@@ -125,12 +120,7 @@ it.each([
   setup();
   await using screen = await render(
     <ToastProvider timeout={0}>
-      <ThreadRelationshipsPanel
-        environmentId={environmentId}
-        threadId={threadId}
-        showLineage
-        showSideChats
-      />
+      <ThreadRelationshipsPanel environmentId={environmentId} threadId={threadId} showLineage />
     </ToastProvider>,
     { router: "/environment/fork" },
   );
@@ -198,7 +188,6 @@ it("opens an idle child from Lineage when its shell has not been loaded", async 
       environmentId={environmentId}
       threadId={projection.thread.id}
       showLineage
-      showSideChats
     />,
   );
   await screen.getByRole("button", { name: /Previous agents/ }).click();
@@ -221,42 +210,7 @@ it("shows a lineage thread's full title in its tooltip", async () => {
   };
   state.relatedShells = [sourceThread];
   await using _screen = await render(
-    <ThreadRelationshipsPanel
-      environmentId={environmentId}
-      threadId={threadId}
-      showLineage
-      showSideChats={false}
-    />,
-  );
-
-  await userEvent.hover(page.getByText(longTitle, { exact: true }));
-  await vi.waitFor(() =>
-    expect(document.querySelector('[data-slot="tooltip-popup"]')?.textContent).toContain(longTitle),
-  );
-});
-
-it("shows a side chat's full title in its tooltip", async () => {
-  setup();
-  const longTitle = "Side chat question with a title that the side chat row truncates";
-  state.relatedShells = [
-    {
-      id: "side",
-      title: longTitle,
-      lineage: {
-        parentThreadId: threadId,
-        relationshipToParent: "fork",
-        rootThreadId: threadId,
-        sideChat: true,
-      },
-    },
-  ];
-  await using _screen = await render(
-    <ThreadRelationshipsPanel
-      environmentId={environmentId}
-      threadId={threadId}
-      showLineage={false}
-      showSideChats
-    />,
+    <ThreadRelationshipsPanel environmentId={environmentId} threadId={threadId} showLineage />,
   );
 
   await userEvent.hover(page.getByText(longTitle, { exact: true }));
@@ -304,12 +258,7 @@ it("shows a remote subagent's full title in its tooltip even when its environmen
   };
   await using screen = await render(
     <div style={{ width: 320 }}>
-      <ThreadRelationshipsPanel
-        environmentId={environmentId}
-        threadId={threadId}
-        showLineage
-        showSideChats={false}
-      />
+      <ThreadRelationshipsPanel environmentId={environmentId} threadId={threadId} showLineage />
     </div>,
     { router: "/environment/fork" },
   );
@@ -351,12 +300,7 @@ it("shows a delegated-from thread's full title in its tooltip even when its envi
     },
   };
   await using screen = await render(
-    <ThreadRelationshipsPanel
-      environmentId={environmentId}
-      threadId={threadId}
-      showLineage
-      showSideChats={false}
-    />,
+    <ThreadRelationshipsPanel environmentId={environmentId} threadId={threadId} showLineage />,
     { router: "/environment/fork" },
   );
 
@@ -399,7 +343,6 @@ it("hides a deleted fork and keeps unloaded and archived forks with their curren
       environmentId={environmentId}
       threadId={projection.thread.id}
       showLineage
-      showSideChats
     />,
   );
   await expect.element(screen.getByText("Unloaded fork", { exact: true })).toBeVisible();

@@ -67,8 +67,6 @@ export function useComposerMenuItems({
   pullRequestProjectId,
   pullRequestRepository,
   threadPullRequests,
-  sideChatAvailable,
-  sideChatDisabledReason,
   freshSessionAvailable,
   compactSlashCommandAvailable,
   selectedProvider,
@@ -87,8 +85,6 @@ export function useComposerMenuItems({
   readonly pullRequestProjectId: ProjectId | null;
   readonly pullRequestRepository: string | null;
   readonly threadPullRequests: ReadonlyArray<ThreadPullRequestLink> | undefined;
-  readonly sideChatAvailable: boolean;
-  readonly sideChatDisabledReason: string | null;
   readonly freshSessionAvailable: boolean;
   readonly compactSlashCommandAvailable: boolean;
   readonly selectedProvider: ProviderDriverKind;
@@ -238,24 +234,6 @@ export function useComposerMenuItems({
           label: "/model",
           description: "Switch response model for this thread",
         },
-        ...(sideChatAvailable
-          ? ([
-              {
-                id: "slash:side",
-                type: "slash-command",
-                command: "side",
-                label: "/side",
-                description: sideChatDisabledReason ?? "Ask a side question in a new side chat",
-              },
-              {
-                id: "slash:btw",
-                type: "slash-command",
-                command: "btw",
-                label: "/btw",
-                description: sideChatDisabledReason ?? "Same as /side",
-              },
-            ] as const)
-          : []),
         ...(freshSessionAvailable
           ? ([
               {

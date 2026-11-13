@@ -215,8 +215,6 @@ function run(
 }
 
 export interface FakeThread {
-  /** Makes this a side chat of that thread. */
-  readonly sideChatOf?: ThreadId;
   /** Makes this an older settled thread the shell leaves out; only its family read returns it. */
   readonly olderSettled?: true;
   readonly id: ThreadId;
@@ -271,10 +269,9 @@ function shellOf(thread: FakeThread): OrchestrationV2ThreadShell {
     worktreePath: null,
     activeProviderThreadId: thread.providerThreads?.[0]?.id ?? null,
     lineage: {
-      rootThreadId: thread.sideChatOf ?? thread.id,
-      parentThreadId: thread.sideChatOf ?? null,
+      rootThreadId: thread.id,
+      parentThreadId: null,
       relationshipToParent: null,
-      ...(thread.sideChatOf ? { sideChat: true } : {}),
     },
     forkedFrom: null,
     createdBy: "user",
@@ -436,13 +433,10 @@ const handlers: Record<string, (input: never) => unknown> = {
     );
   },
   [ORCHESTRATION_V2_WS_METHODS.getThreadFamily]: (input: { readonly threadId: ThreadId }) => {
-    const rootOf = (thread: FakeThread) => thread.sideChatOf ?? thread.id;
     const requested = threads.find((candidate) => candidate.id === input.threadId);
     return Effect.succeed({
       snapshotSequence: sequence,
-      threads: requested
-        ? threads.filter((thread) => rootOf(thread) === rootOf(requested)).map(shellOf)
-        : [],
+      threads: requested ? [shellOf(requested)] : [],
     });
   },
   [WS_METHODS.subscribeVcsStatus]: () =>

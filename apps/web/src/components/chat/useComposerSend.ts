@@ -1,4 +1,4 @@
-import { isClearComposerCommand, parseSideChatCommand } from "@t3tools/shared/composerTrigger";
+import { isClearComposerCommand } from "@t3tools/shared/composerTrigger";
 import { armFreshSession, disarmFreshSession, readFreshSessionArm } from "./freshSessionArms";
 import {
   mergeDirectPreviewAnnotation,
@@ -243,10 +243,6 @@ interface ComposerSendInput {
   readonly setKeepFullHistory: (threadKey: string, keep: boolean) => void;
   readonly anchorNewTurn: TimelineFollow["anchorNewTurn"];
   readonly acknowledgeActiveThreadWoke: () => void;
-  /** Resolves true once the side chat started and got the prompt. */
-  readonly onSideChat?: ((prompt: string) => Promise<boolean>) | undefined;
-  /** Refuses `/side` with this reason and keeps the draft. */
-  readonly sideChatDisabledReason: string | null;
   readonly handleNewThreadInActiveProject: () => void;
   readonly persistThreadSettingsForNextTurn: (input: {
     threadId: ThreadId;
@@ -333,8 +329,6 @@ export function useComposerSend(input: ComposerSendInput) {
     setKeepFullHistory,
     anchorNewTurn,
     acknowledgeActiveThreadWoke,
-    onSideChat,
-    sideChatDisabledReason,
     handleNewThreadInActiveProject,
     persistThreadSettingsForNextTurn,
     linkCheckoutPullRequest,
@@ -405,18 +399,11 @@ export function useComposerSend(input: ComposerSendInput) {
     }
 
     const sendCtx = composerRef.current?.getSendContext();
-    // `/side` beats an open question and a plan follow-up, which would send the text to main.
-    const sideChatCommand =
-      sendCtx && !directAnnotation && !queuedRunEdit.isEditing
-        ? parseSideChatCommand(promptAtSend)
-        : null;
     const answeringQuestion =
       Boolean(activePendingProgress) && sendCtx?.answeringPendingUserInput !== false;
-    const startsSideChat =
-      onSideChat !== undefined && sideChatCommand !== null && sideChatDisabledReason === null;
     // An answer responds to the open request rather than starting a turn, so the new-message
     // guards below (loading, busy, provider) must not swallow it.
-    if (answeringQuestion && !startsSideChat && !directAnnotation) {
+    if (answeringQuestion && !directAnnotation) {
       if (readEnvironmentScope(environmentId, AuthOrchestrationOperateScope) && activeThread) {
         onAdvanceActivePendingUserInput();
       }
@@ -485,50 +472,6 @@ export function useComposerSend(input: ComposerSendInput) {
         }),
         id: `chat-send-environment-unavailable:${toastSlot}`,
       });
-      return;
-    }
-    // Where side chats are unavailable, `/side` text can still be a literal answer.
-    if (sideChatDisabledReason !== null && sideChatCommand && !answeringQuestion) {
-      toastManager.add(
-        stackedThreadToast({
-          type: "warning",
-          title: "Side chat not started",
-          description: sideChatDisabledReason,
-        }),
-      );
-      return;
-    }
-    if (onSideChat && sendCtx && sideChatCommand && sideChatDisabledReason === null) {
-      if (
-        sendCtx.images.length > 0 ||
-        sendCtx.files.length > 0 ||
-        filterTerminalContextsWithText(sendCtx.terminalContexts).length > 0 ||
-        sendCtx.previewAnnotations.length > 0 ||
-        sendCtx.reviewComments.length > 0 ||
-        sendCtx.threadContexts.length > 0 ||
-        sendCtx.environmentContexts.length > 0 ||
-        useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.replyTo
-      ) {
-        toastManager.add(
-          stackedThreadToast({
-            type: "warning",
-            title: "Side chats take text only",
-            description: "Remove the attachments and context, then send it again.",
-          }),
-        );
-        return;
-      }
-      const started = await onSideChat(sideChatCommand.prompt);
-      // Clear only what was sent; the user may have edited the draft or left meanwhile.
-      if (
-        started &&
-        currentRouteThreadKeyRef.current === routeThreadKey &&
-        promptRef.current === promptAtSend
-      ) {
-        promptRef.current = "";
-        setComposerDraftPrompt(composerDraftTarget, "");
-        composerRef.current?.resetCursorState();
-      }
       return;
     }
     if (answeringQuestion) {

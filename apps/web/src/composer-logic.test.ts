@@ -569,9 +569,9 @@ describe("extendReplacementRangeForTrailingSpace", () => {
   });
 });
 
-describe("side chat slash commands", () => {
+describe("start-only slash commands", () => {
   it("are not offered after the start of a message", () => {
-    const items = (["side", "btw", "clear", "model"] as const).map((command) => ({
+    const items = (["clear", "model"] as const).map((command) => ({
       id: `slash:${command}`,
       type: "slash-command" as const,
       command,

@@ -66,7 +66,6 @@ function renderChild(...replies: ReadonlyArray<unknown>) {
       environmentId={childEnvironmentId}
       threadId={childThreadId}
       showLineage
-      showSideChats={false}
     />,
     { router: childPath },
   );

@@ -50,7 +50,7 @@ import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime
 import * as Schema from "effect/Schema";
 import { formatComposerModelMention } from "@t3tools/client-runtime/composer-model-mentions";
 import { isPasteAsTextShortcut } from "@t3tools/client-runtime/text-paste";
-import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
 import { folderDropTarget, resolveDroppedFolderPath } from "./folderDrop";
 import { splitTransferredFiles } from "./workspaceFileDrop";
@@ -382,8 +382,6 @@ export interface ChatComposerProps {
   keepFullHistory: boolean;
   onToggleKeepFullHistory: () => void;
   onUsageLimitsCommand?: (() => void) | undefined;
-  sideChatAvailable?: boolean;
-  sideChatDisabledReason?: string | null;
   /** Arms a fresh session for the next message; absent where `/clear` is unavailable. */
   onFreshSession?: (() => void) | undefined;
   environmentUnavailable: {
@@ -1118,8 +1116,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     pullRequestProjectId,
     pullRequestRepository,
     threadPullRequests,
-    sideChatAvailable: props.sideChatAvailable === true,
-    sideChatDisabledReason: props.sideChatDisabledReason ?? null,
     freshSessionAvailable: props.onFreshSession !== undefined,
     compactSlashCommandAvailable,
     selectedProvider,
@@ -1920,17 +1916,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         }
         return;
       }
-      if (item.command === "side" || item.command === "btw") {
-        if (props.sideChatDisabledReason) return;
-        const applied = applyPromptReplacement(
-          trigger.rangeStart,
-          trigger.rangeEnd,
-          `/${item.command} `,
-          { expectedText: snapshot.value.slice(trigger.rangeStart, trigger.rangeEnd) },
-        );
-        if (applied) setComposerHighlightedItemId(null);
-        return;
-      }
       return;
     }
     if (item.type === "provider-slash-command") {
@@ -2485,11 +2470,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               type="button"
               className="cursor-pointer hover:text-foreground"
               onClick={() => {
-                const { citation } = replyTo;
-                const source = readThreadShell(
-                  scopeThreadRef(citation.environmentId, citation.threadId),
-                );
-                void navigate(assistantCitationNavigation(citation, source));
+                void navigate(assistantCitationNavigation(replyTo.citation));
               }}
             >
               {assistantCitationLabel(replyTo.citation)}

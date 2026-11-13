@@ -50,7 +50,6 @@ import {
   ChevronDownIcon,
   CornerLeftUpIcon,
   GitForkIcon,
-  MessagesSquareIcon,
   MoreHorizontalIcon,
   PlusIcon,
   SquareIcon,
@@ -81,7 +80,6 @@ import { useEnvironmentQuery } from "../../state/query";
 import { AgentElapsed } from "./AgentElapsed";
 import { ThreadRelationshipIcon, threadRelationshipStatusLabel } from "./ThreadRelationshipIcon";
 import { ThreadLineageWorkflowRow } from "./ThreadLineageWorkflowRow";
-import { openSideChatTab } from "../../lib/sideChatPane";
 
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -425,7 +423,6 @@ export function ThreadRelationshipsPanel(props: {
   readonly environmentId: EnvironmentId;
   readonly threadId: ThreadId;
   readonly showLineage: boolean;
-  readonly showSideChats: boolean;
 }) {
   const ref = scopeThreadRef(props.environmentId, props.threadId);
   const projection = useThreadProjection(ref)?.projection ?? null;
@@ -573,11 +570,8 @@ export function ThreadRelationshipsPanel(props: {
     related = [],
     active = [],
     previous = [],
-    sideChats = [],
-  } = groupBy(visibleRelationships, ({ threadId, edge }) => {
+  } = groupBy(visibleRelationships, ({ edge }) => {
     const isParent = isParentThreadRelationship(edge, props.threadId);
-    if (!isParent && graph.nodes.get(threadId)?.thread?.lineage.sideChat === true)
-      return "sideChats";
     if (edge.kind !== "subagent" || isParent) return "related";
     return isFinishedAgentStatus(edge.status) ? "previous" : "active";
   });
@@ -618,19 +612,14 @@ export function ThreadRelationshipsPanel(props: {
       runningCount > 0 ||
       remoteActive.length > 0 ||
       remotePrevious.length > 0 ||
-      delegatedFrom !== undefined ||
-      // Disconnect lives in this heading, so a thread with only side chats still shows it.
-      (canDetach && sideChats.length > 0));
-  const sideChatsVisible = props.showSideChats && sideChats.length > 0;
-  const runningSideChats = sideChats.filter(({ edge }) => edge.status === "running").length;
+      delegatedFrom !== undefined);
 
-  if (!lineageVisible && !sideChatsVisible) {
+  if (!lineageVisible) {
     return null;
   }
 
   // Idle children can be omitted from the shell; opening one loads its own detail.
   const openThread = (threadId: ThreadId) => {
-    if (openSideChatTab(ref, graph.nodes.get(threadId)?.thread ?? null)) return;
     void navigate({
       to: "/$environmentId/$threadId",
       params: buildThreadRouteParams(scopeThreadRef(props.environmentId, threadId)),
@@ -728,17 +717,8 @@ export function ThreadRelationshipsPanel(props: {
       (isParent && threadId === parentRef?.threadId
         ? (node?.thread?.activityRunStatus ?? parentNativeStatus)
         : undefined) ?? threadRelationshipRowStatus(graph, { threadId, edge });
-    const RelationshipIcon = isParent
-      ? CornerLeftUpIcon
-      : isSubagent
-        ? BotIcon
-        : node?.thread?.lineage.sideChat === true
-          ? MessagesSquareIcon
-          : GitForkIcon;
-    const relationship =
-      node?.thread?.lineage.sideChat === true && !isParent
-        ? "Side chat"
-        : relationshipLabel(edge, props.threadId);
+    const RelationshipIcon = isParent ? CornerLeftUpIcon : isSubagent ? BotIcon : GitForkIcon;
+    const relationship = relationshipLabel(edge, props.threadId);
     const projectedAgent = isSubagent && !isParent ? subagentsByThreadId.get(threadId) : undefined;
     const workflowGroup =
       projectedAgent === undefined ? undefined : workflowGroupsById.get(projectedAgent.id);
@@ -1037,22 +1017,6 @@ export function ThreadRelationshipsPanel(props: {
               }
             </ThreadLineageGroup>
           ))}
-        </ThreadDetailsSection>
-      ) : null}
-      {sideChatsVisible ? (
-        <ThreadDetailsSection
-          headingId="thread-details-side-chats-heading"
-          title={runningSideChats > 0 ? `Side chats · ${runningSideChats} running` : "Side chats"}
-          data-thread-side-chats-panel
-        >
-          <ThreadLineageGroup
-            key={`${scopedThreadKey(ref)}:side-chats`}
-            label={null}
-            rows={sideChats}
-            expanded
-          >
-            {(visibleRows) => visibleRows.map(renderRelationshipRow)}
-          </ThreadLineageGroup>
         </ThreadDetailsSection>
       ) : null}
     </>

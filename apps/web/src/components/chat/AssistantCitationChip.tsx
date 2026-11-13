@@ -1,4 +1,3 @@
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import type { AssistantCitation, ResponseContextRecord } from "@t3tools/contracts";
 import {
   assistantCitationLabel,
@@ -23,7 +22,6 @@ import {
   assistantCitationRoute,
 } from "../../lib/assistantCitationNavigation";
 import { cn } from "~/lib/utils";
-import { useQuietThreadShell } from "~/state/entities";
 import { ContextChip, ContextChipAction, ContextChipLabel } from "../ContextChip";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { AssistantCitationCommentEditor } from "./AssistantCitationCommentEditor";
@@ -34,18 +32,15 @@ import { textDirection } from "~/textDirection";
 
 function useCitationSourceLinkProps(citation: AssistantCitation) {
   const navigate = useNavigate();
-  const sourceThread = useQuietThreadShell(
-    scopeThreadRef(citation.environmentId, citation.threadId),
-  );
   return {
-    ...assistantCitationRoute(citation, sourceThread),
+    ...assistantCitationRoute(citation),
     "data-markdown-copy": serializeAssistantCitation(citation),
     onClick: (event: ReactMouseEvent<HTMLAnchorElement>) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
         return;
       }
       event.preventDefault();
-      void navigate(assistantCitationNavigation(citation, sourceThread));
+      void navigate(assistantCitationNavigation(citation));
     },
   };
 }

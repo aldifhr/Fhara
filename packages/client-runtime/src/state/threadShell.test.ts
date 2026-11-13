@@ -258,22 +258,15 @@ describe("v2 thread shell lists", () => {
       },
       pendingRuntimeRequest: { ...request, kind: "command" as const },
     };
-    const sideChats = threads.sideChatsAtom(parentRef);
-    const disposeSideChats = registry.mount(sideChats);
     registry.set(snapshotAtom(environmentId), {
       ...v2ShellSnapshot,
       threads: [root, sideChat, helper],
     });
     expect(registry.get(parent)?.pendingSubagentRequest).toBe("approval");
-    expect(
-      registry.get(sideChats).map((thread) => [thread.id, thread.pendingSubagentRequest]),
-    ).toEqual([[sideChat.id, "approval"]]);
 
     registry.set(snapshotAtom(environmentId), { ...v2ShellSnapshot, threads: [root, sideChat] });
     expect(registry.get(parent)?.pendingSubagentRequest).toBeNull();
-    expect(registry.get(sideChats).map((thread) => thread.pendingSubagentRequest)).toEqual([null]);
     expect(registry.get(inputs)).toEqual([]);
-    disposeSideChats();
     disposeNavigation();
     disposeInputs();
     disposeParent();
